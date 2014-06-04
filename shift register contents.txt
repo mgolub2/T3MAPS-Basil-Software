@@ -1,0 +1,12 @@
+control pattern pixel (32)
+
+global_readout_enable + SRDO_load + NCout2 + count_hits_not + count_enable + count_clear_not + S0 + S1 + config_mode + config_bits + lden + SRCLR_SEL + HITLD_IN + NCout21_25 + column_address
+
+dac pattern (144 bits)
+
+(default means insert extra bits. we used default=10000001)
+default + default + default + default + binary_string(DisVbn,8) + default + default + default + default + default + default + binary_string(VbpThStep,8) + binary_string(PrmpVbp,8) + binary_string(PrmpVbnFol,8) + binary_string(vth,8) + binary_string(PrmpVbf,8) + default + default
+
+control pattern (32 bits)
+
+global_readout_enable + SRDO_load + NCout2 + count_hits_not + count_enable + count_clear_not + S0 + S1 + config_mode + LD_IN0_7 + LDENABLE_SEL + SRCLR_SEL + HITLD_IN + NCout21_25 + column_address
