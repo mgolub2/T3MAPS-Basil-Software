@@ -40,20 +40,20 @@ class Chip(object):
 
     def clock_in_bits(self, input_bits):
         """
-        Write the current column's shift register and return the output.
+        Write the current column's pixel shift register and return the output.
 
         Give the bits as a list of :attr:`Chip.HIGH` and :attr:`Chip.LOW`.
 
         Shift in the first bit of the list first. Returns a list with the first
         output bit first (i.e. the order the bits are shifted out).
 
-        To change columns, use set_column().
+        To change columns, use :func:`set_column`.
 
         """
         output_bits = []
         for bit in input_bits:
             self._set_input(bit)
-            output_bits.append(self._advance_clock())
+            output_bits.append(self._advance_pixel_register_clock())
         return output_bits
 
     def set_column(self, column_number):
@@ -66,7 +66,7 @@ class Chip(object):
         # Note: the order is reversed since the first bit to go in
         # corresponds to the highest-numbered column.
         self._set_column_register_input(Chip.LOW)
-        self._advance_column_register_clock(self.num_columns-column_number-1)
+        self._advance_column_register_clock(self.num_columns - column_number-1)
         self._set_column_register_input(Chip.HIGH)
         self._advance_column_register_clock(1)
         self._set_column_register_input(Chip.LOW)
@@ -80,17 +80,17 @@ class Chip(object):
         """
         return self._current_column
 
-    def _advance_clock(self, num_clocks=1):
+    def _advance_pixel_register_clock(self, num_clocks=1):
         """
-        Send num_clocks clock signals to the column data register
+        Send num_clocks clock signals to the pixel register
         and return the output.
 
         """
         pass
 
-    def _set_input(self, level):
+    def _set_pixel_register_input(self, level):
         """
-        Set the input level to send to the column data register.
+        Set the input level to send to the pixel register.
 
         """
         pass
@@ -107,7 +107,7 @@ class Chip(object):
         """
         Set the column shift register input level.
 
-        Level could be Chip.HIGH or Chip.LOW
+        Level can be :attr:`Chip.HIGH` or :attr:`Chip.LOW`
 
         """
         pass
