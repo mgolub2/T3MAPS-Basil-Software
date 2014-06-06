@@ -11,7 +11,8 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
-   code
+   chip
+   chip_inst_workstation
 
 Indices and tables
 ==================
