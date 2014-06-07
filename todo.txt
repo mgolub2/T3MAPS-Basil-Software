@@ -1,0 +1,4 @@
+figure out what data generator signals are needed to achieve the following results on the chip
+- pick a column
+- configuration
+- send/read data
