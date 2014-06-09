@@ -1,6 +1,6 @@
-============             ===========
+==================       ===========
 Bit numbers              Description
-============             ===========
+==================       ===========
 0                        global readout enable
 1-2                      shift register DO load
 3                        NCout2
@@ -31,4 +31,4 @@ Bit numbers              Description
 120-127                  PrmpVbf
 128-135                  empty
 136-143                  empty
-============             ===========
+==================       ===========
