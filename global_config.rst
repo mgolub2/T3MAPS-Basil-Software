@@ -17,8 +17,6 @@ Bit numbers         Description
 22-26               NCout21_25
 27-31               column address
 
-End of control pattern
-
 32-39               DisVbn
 40-47               empty
 48-55               empty
@@ -33,3 +31,4 @@ End of control pattern
 120-127             PrmpVbf
 128-135             empty
 136-143             empty
+============        ===========
