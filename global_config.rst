@@ -1,5 +1,5 @@
 Bit numbers         Description
-===============================
+============     ==============
 0                   global readout enable
 1-2                 shift register DO load
 3                   NCout2
