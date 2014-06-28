@@ -22,148 +22,240 @@ class Pixel(Dut):
     A class for communicating with a pixel chip.
 
     """
-    
-    def program_global_reg(self):
-        """
-        Send the global register to the chip.
 
-        Loads the values of self['GLOBAL_REG'] onto the chip.
+    cursor = 0
+    """
+    The current location to insert new commands.
+
+    """
+
+    def __init__(self, conf_file_name=None, voltage=1.2, conf_dict=None):
+        """
+        Initializes the chip, including turning on power.
+
+        Exactly one of conf_file_name and conf_dict must be specified.
+        """
+        if not (bool(conf_file_name) != bool(conf_dict)):
+            raise ValueError("Exactly one of conf_file_name and conf_dict must be specified.")
+        elif conf_file_name:
+            # Read in the configuration YAML file
+            stream = open("lt3maps.yaml", 'r')
+            conf_dict = yaml.load(stream)
+        else: # conf_dict must be specified
+            pass
+
+        # Create the Pixel object
+        #chip = Pixel(conf_dict)
+        Dut.__init__(self,conf_dict)
+
+        try:      
+            # Initialize the chip
+            self.init()
+        except NotImplementedError: # this is to make simulation not fail
+            print 'chip.init() :: NotImplementedError'
+            
+        # turn on the adapter card's power
+        self['PWR']['EN_VD1'] = 1
+        self['PWR']['EN_VD2'] = 1
+        self['PWR']['EN_VA1'] = 1
+        self['PWR']['EN_VA2'] = 1
+        self['PWR'].write()
+
+        # Set the output voltage on the pins
+        self['PWRAC'].set_voltage("VDDD1",1.2)
+        print "VDDD1", self['PWRAC'].get_voltage("VDDD1"), self['PWRAC'].get_current("VDDD1")
+
+        # Make sure the chip is reset
+        self.reset()
+    def write_global_reg(self, location=None, load_DAC=False):
+        """
+        Add the global register to the command to send to the chip.
+
+        Loads the values of self['GLOBAL_REG'] into the ['SEQ'] register.
         Includes enabling the clock, and loading the Control (CTR)
         and DAC shadow registers.
 
+        If `location` is not specified, then the current value of
+        `self.cursor` is used.
+
         """
         
-        self._clear_strobes()
-        
+        if not location:
+            location = self.cursor
+
         gr_size = len(self['GLOBAL_REG'][:]) #get the size
-        self['SEQ']['SHIFT_IN'][0:gr_size] = self['GLOBAL_REG'][:] # this will be shifted out
-        self['SEQ']['GLOBAL_SHIFT_EN'][0:gr_size] = bitarray( gr_size * '1') #this is to enable clock
-        self['SEQ']['GLOBAL_CTR_LD'][gr_size+1:gr_size+2] = bitarray("1") # load signals
-        self['SEQ']['GLOBAL_DAC_LD'][gr_size+1:gr_size+2] = bitarray("1")
-        self['SEQ']['SLALTBUS'].setall(True)
+        # define start and stop indices in the array
+        start_location = location
+        stop_location = location + gr_size
+        seq = self['SEQ']
+        # input is the contents of global register
+        seq['SHIFT_IN'][start_location:stop_location] = self['GLOBAL_REG'][:]
+        # Enable the clock
+        seq['GLOBAL_SHIFT_EN'][start_location:stop_location] = bitarray( gr_size * '1')
+        # load signals into the shadow register
+        seq['GLOBAL_CTR_LD'][stop_location + 1:stop_location + 2] = bitarray("1")
+        if load_DAC:
+            seq['GLOBAL_DAC_LD'][stop_location + 1:stop_location + 2] = bitarray("1")
         
         
         # Execute the program (write bits to output pins)
         # + 1 extra 0 bit so that everything ends on LOW instead of HIGH
-        self._run_seq(gr_size+3)
+        #self._run_seq(gr_size+3)
     
-    def program_pixel_reg(self, enable_receiver=True):
+    def write_pixel_reg(self, location=None):
         """
-        Send the pixel register to the chip and store the output.
+        Add the pixel register to the command to send to the chip.
 
-        Loads the values of self['PIXEL_REG'] onto the chip.
-        Includes enabling the clock, and loading the Control (CTR)
-        and DAC shadow registers.
+        Loads the values of self['PIXEL_REG'] into the ['SEQ'] register.
+        Includes enabling the clock.
+
+        If `location` is None, uses current value of `self.cursor`.
+
+        """
+        if not location:
+            location = self.cursor
+
+        px_size = len(self['PIXEL_REG'][:]) #get the size
+        start_location = location
+        stop_location = location + px_size
+        self['SEQ']['SHIFT_IN'][start_location:stop_location] = self['PIXEL_REG'][:] # this will be shifted out
+        self['SEQ']['PIXEL_SHIFT_EN'][start_location:stop_location] = bitarray( px_size * '1') #this is to enable clock
+        
+        #self._run_seq(px_size+1) #add 1 bit more so there is 0 at the end other way will stay high
+            
+    def run_seq(self, size, num_executions=1, enable_receiver=True):
+        """
+        Send the contents of self['SEQ'] to the chip and wait until it finishes.
 
         if(enable_receiver), stores the output (by byte) in
         self['DATA'], retrievable via `chip['DATA'].get_data()`.
 
         """
-        
-        self._clear_strobes()
-
         #enable receiver it work only if pixel register is enabled/clocked
         chip['PIXEL_RX'].set_en(enable_receiver) 
-
-        px_size = len(self['PIXEL_REG'][:]) #get the size
-        self['SEQ']['SHIFT_IN'][0:px_size] = self['PIXEL_REG'][:] # this will be shifted out
-        self['SEQ']['PIXEL_SHIFT_EN'][0:px_size] = bitarray( px_size * '1') #this is to enable clock
-        
-        self._run_seq(px_size+1) #add 1 bit more so there is 0 at the end other way will stay high
-            
-    def _run_seq(self, size):
-        """
-        Send the contents of self['SEQ'] to the chip and wait until it finishes.
-
-        """
         
         # Write the sequence to the sequence generator (hw driver)
         self['SEQ'].write(size) #write pattern to memory
+
+        # Enable SelAltBus (don't know why)
+        self['SEQ']['SLALTBUS'].setall(True)
         
         self['SEQ'].set_size(size)  # set size
-        self['SEQ'].set_repeat(1) # set reapet
+        self['SEQ'].set_repeat(num_executions) # set repeat
         self['SEQ'].start() # start
         
         while not chip['SEQ'].get_done():
             time.sleep(0.01)
             print "Wait for done..."
 
-    def _clear_strobes(self):
+    def reset(self, seq_fields=None):
         """
-        Resets the "enable" and "load" output streams to all 0.
+        Reset the given fields of the ['SEQ'] register to all 0's.
+
+        If no fields are given, resets all fields (entire register).
 
         """
-        #reset some stuff
-        self['SEQ']['GLOBAL_SHIFT_EN'].setall(False)
-        self['SEQ']['GLOBAL_CTR_LD'].setall(False)
-        self['SEQ']['GLOBAL_DAC_LD'].setall(False)
-        self['SEQ']['PIXEL_SHIFT_EN'].setall(False)
-        self['SEQ']['INJECTION'].setall(False)
+        if not seq_fields:
+            seq_fields = [track['name'] for track in self['SEQ']._conf['tracks']]
+
+        for field in seq_fields:
+            self['SEQ'][field].setall(False)
+
+    def set_global_register(self, **kwargs):
+        """
+        Assign the values in given as parameters to the fields
+        in ['GLOBAL_REG'].
+
+        The values can be integers or bitarrays.
+
+        """
+        for key, value in kwargs.iteritems():
+            self['GLOBAL_REG'][key] = value
+
+    def set_pixel_register(self, value, start=None, stop=None):
+        """
+        Assign the given `value` to ['PIXEL_REG'][start:stop].
+
+        `value` must be a bitarray (of appropriate length given
+        start and stop). If start is missing, starts at position 0.
+        If stop is missing, ends at position len(...['PIXEL_REG']).
+
+        """
+        self['PIXEL_REG'][start:stop] = value
         
         
 if __name__ == "__main__":
-    # Read in the configuration YAML file
-    stream = open("pixel.yaml", 'r')
-    cnfg = yaml.load(stream)
+    ## Read in the configuration YAML file
+    #stream = open("lt3maps.yaml", 'r')
+    #cnfg = yaml.load(stream)
 
-    # Create the Pixel object
-    chip = Pixel(cnfg)
+    ## Create the Pixel object
+    #chip = Pixel(cnfg)
 
-    try:      
-        # Initialize the chip
-        chip.init()
-    except NotImplementedError: # this is to make simulation not fail
-        print 'chip.init() :: NotImplementedError'
-        
-    # turn on the adapter card's power
-    chip['PWR']['EN_VD1'] = 1
-    chip['PWR']['EN_VD2'] = 1
-    chip['PWR']['EN_VA1'] = 1
-    chip['PWR']['EN_VA2'] = 1
-    chip['PWR'].write()
+    #try:      
+    #    # Initialize the chip
+    #    chip.init()
+    #except NotImplementedError: # this is to make simulation not fail
+    #    print 'chip.init() :: NotImplementedError'
+    #    
+    ## turn on the adapter card's power
+    #chip['PWR']['EN_VD1'] = 1
+    #chip['PWR']['EN_VD2'] = 1
+    #chip['PWR']['EN_VA1'] = 1
+    #chip['PWR']['EN_VA2'] = 1
+    #chip['PWR'].write()
 
-    # Set the output voltage on the pins
-    chip['PWRAC'].set_voltage("VDDD1",1.2)
-    print "VDDD1", chip['PWRAC'].get_voltage("VDDD1"), chip['PWRAC'].get_current("VDDD1")
+    ## Set the output voltage on the pins
+    #chip['PWRAC'].set_voltage("VDDD1",1.2)
+    #print "VDDD1", chip['PWRAC'].get_voltage("VDDD1"), chip['PWRAC'].get_current("VDDD1")
+
+    ## Make sure the chip is reset
+    #chip.reset()
+    chip = Pixel("lt3maps.yaml")
 
     #settings for global register (to input into global SR)
     # can be an integer representing the binary number desired,
     # or a bitarray (of the form bitarray("10101100")).
-    chip['GLOBAL_REG']['global_readout_enable'] = 0# size = 1 bit
-    chip['GLOBAL_REG']['SRDO_load'] = 0# size = 1 bit
-    chip['GLOBAL_REG']['NCout2'] = 0# size = 1 bit
-    chip['GLOBAL_REG']['count_hits_not'] = 0# size = 1
-    chip['GLOBAL_REG']['count_enable'] = 0# size = 1
-    chip['GLOBAL_REG']['count_clear_not'] = 0# size = 1
-    chip['GLOBAL_REG']['S0'] = 0# size = 1
-    chip['GLOBAL_REG']['S1'] = 0# size = 1
-    chip['GLOBAL_REG']['config_mode'] = 3# size = 2
-    chip['GLOBAL_REG']['LD_IN0_7'] = 0# size = 8
-    chip['GLOBAL_REG']['LDENABLE_SEL'] = 0# size = 1
-    chip['GLOBAL_REG']['SRCLR_SEL'] = 0# size = 1
-    chip['GLOBAL_REG']['HITLD_IN'] = 0# size = 1
-    chip['GLOBAL_REG']['NCout21_25'] = 0# size = 5
-    chip['GLOBAL_REG']['column_address'] = 0# size = 6
-    chip['GLOBAL_REG']['DisVbn'] = 0# size = 8
-    chip['GLOBAL_REG']['VbpThStep'] = 0# size = 8
-    chip['GLOBAL_REG']['PrmpVbp'] = 0# size = 8
-    chip['GLOBAL_REG']['PrmpVbnFol'] = 0# size = 8
-    chip['GLOBAL_REG']['vth'] = 0# size = 8
-    chip['GLOBAL_REG']['PrmpVbf'] = 0# size = 8
+    #chip['GLOBAL_REG']['global_readout_enable'] = 1# size = 1 bit
+    #chip['GLOBAL_REG']['SRDO_load'] = 0# size = 1 bit
+    #chip['GLOBAL_REG']['NCout2'] = 1# size = 1 bit
+    #chip['GLOBAL_REG']['count_hits_not'] = 0# size = 1
+    #chip['GLOBAL_REG']['count_enable'] = 0# size = 1
+    #chip['GLOBAL_REG']['count_clear_not'] = 0# size = 1
+    #chip['GLOBAL_REG']['S0'] = 0# size = 1
+    #chip['GLOBAL_REG']['S1'] = 0# size = 1
+    #chip['GLOBAL_REG']['config_mode'] = 3# size = 2
+    #chip['GLOBAL_REG']['LD_IN0_7'] = 0# size = 8
+    #chip['GLOBAL_REG']['LDENABLE_SEL'] = 0# size = 1
+    #chip['GLOBAL_REG']['SRCLR_SEL'] = 0# size = 1
+    #chip['GLOBAL_REG']['HITLD_IN'] = 0# size = 1
+    #chip['GLOBAL_REG']['NCout21_25'] = 0# size = 5
+    #chip['GLOBAL_REG']['column_address'] = 0# size = 6
+    #chip['GLOBAL_REG']['DisVbn'] = 0# size = 8
+    #chip['GLOBAL_REG']['VbpThStep'] = 0# size = 8
+    #chip['GLOBAL_REG']['PrmpVbp'] = 0# size = 8
+    #chip['GLOBAL_REG']['PrmpVbnFol'] = 0# size = 8
+    #chip['GLOBAL_REG']['vth'] = 0# size = 8
+    #chip['GLOBAL_REG']['PrmpVbf'] = 128# size = 8
+    chip.set_global_register(config_mode=3, LDENABLE_SEL=1)
 
     print "program global register..."
-    chip.program_global_reg()
+    chip.write_global_reg(location=0, load_DAC=True)
 
 
     #settings for pixel register (to input into pixel SR)
     # can be an integer representing the binary number desired,
     # or a bitarray (of the form bitarray("10101100")).
 
-    chip['PIXEL_REG'][:] = bitarray('1'*128)
-    chip['PIXEL_REG'][0] = 0
+    #chip['PIXEL_REG'][:] = bitarray('1'*128)
+    #chip['PIXEL_REG'][0] = 0
+    chip.set_pixel_register(bitarray('0'+'1'*127))
 
     print "program pixel register..."
-    chip.program_pixel_reg()
+    chip.write_pixel_reg(location=150)
+
+    # send the commands to the chip
+    chip.run_seq(350, num_executions=0)
 
     # Get output size in bytes
     print "chip['DATA'].get_fifo_size() = ", chip['DATA'].get_fifo_size()
@@ -179,7 +271,7 @@ if __name__ == "__main__":
     data = np.reshape(np.vstack((data1, data0)), -1, order='F') # data is now a 1 dimensional array of all bytes read from the FIFO
     bdata = np.unpackbits(data)#.reshape(-1,128)
 
-    print "data = ", data
-    print "bdata = ", bdata
+    #print "data = ", data
+    #print "bdata = ", bdata
 
     #print 'ids=', np.right_shift(np.bitwise_and(rxd, 0x0fff0000), 16)
