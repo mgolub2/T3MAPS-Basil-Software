@@ -172,71 +172,23 @@ class Pixel(Dut):
         for key, value in kwargs.iteritems():
             self['GLOBAL_REG'][key] = value
 
-    def set_pixel_register(self, value, start=None, stop=None):
+    def set_pixel_register(self, value):
         """
-        Assign the given `value` to ['PIXEL_REG'][start:stop].
+        Assign the given `value` to ['PIXEL_REG'].
 
-        `value` must be a bitarray (of appropriate length given
-        start and stop). If start is missing, starts at position 0.
-        If stop is missing, ends at position len(...['PIXEL_REG']).
+        `value` must be a bitarray, string of bits, or iterable
+        of booleans. The length must match the length of the
+        register.
 
         """
-        self['PIXEL_REG'][start:stop] = value
+        self['PIXEL_REG'][:] = bitarray(value)
         
         
 if __name__ == "__main__":
-    ## Read in the configuration YAML file
-    #stream = open("lt3maps.yaml", 'r')
-    #cnfg = yaml.load(stream)
-
-    ## Create the Pixel object
-    #chip = Pixel(cnfg)
-
-    #try:      
-    #    # Initialize the chip
-    #    chip.init()
-    #except NotImplementedError: # this is to make simulation not fail
-    #    print 'chip.init() :: NotImplementedError'
-    #    
-    ## turn on the adapter card's power
-    #chip['PWR']['EN_VD1'] = 1
-    #chip['PWR']['EN_VD2'] = 1
-    #chip['PWR']['EN_VA1'] = 1
-    #chip['PWR']['EN_VA2'] = 1
-    #chip['PWR'].write()
-
-    ## Set the output voltage on the pins
-    #chip['PWRAC'].set_voltage("VDDD1",1.2)
-    #print "VDDD1", chip['PWRAC'].get_voltage("VDDD1"), chip['PWRAC'].get_current("VDDD1")
-
-    ## Make sure the chip is reset
-    #chip.reset()
+    # create a chip object
     chip = Pixel("lt3maps.yaml")
 
     #settings for global register (to input into global SR)
-    # can be an integer representing the binary number desired,
-    # or a bitarray (of the form bitarray("10101100")).
-    #chip['GLOBAL_REG']['global_readout_enable'] = 1# size = 1 bit
-    #chip['GLOBAL_REG']['SRDO_load'] = 0# size = 1 bit
-    #chip['GLOBAL_REG']['NCout2'] = 1# size = 1 bit
-    #chip['GLOBAL_REG']['count_hits_not'] = 0# size = 1
-    #chip['GLOBAL_REG']['count_enable'] = 0# size = 1
-    #chip['GLOBAL_REG']['count_clear_not'] = 0# size = 1
-    #chip['GLOBAL_REG']['S0'] = 0# size = 1
-    #chip['GLOBAL_REG']['S1'] = 0# size = 1
-    #chip['GLOBAL_REG']['config_mode'] = 3# size = 2
-    #chip['GLOBAL_REG']['LD_IN0_7'] = 0# size = 8
-    #chip['GLOBAL_REG']['LDENABLE_SEL'] = 0# size = 1
-    #chip['GLOBAL_REG']['SRCLR_SEL'] = 0# size = 1
-    #chip['GLOBAL_REG']['HITLD_IN'] = 0# size = 1
-    #chip['GLOBAL_REG']['NCout21_25'] = 0# size = 5
-    #chip['GLOBAL_REG']['column_address'] = 0# size = 6
-    #chip['GLOBAL_REG']['DisVbn'] = 0# size = 8
-    #chip['GLOBAL_REG']['VbpThStep'] = 0# size = 8
-    #chip['GLOBAL_REG']['PrmpVbp'] = 0# size = 8
-    #chip['GLOBAL_REG']['PrmpVbnFol'] = 0# size = 8
-    #chip['GLOBAL_REG']['vth'] = 0# size = 8
-    #chip['GLOBAL_REG']['PrmpVbf'] = 128# size = 8
     chip.set_global_register(config_mode=3, LDENABLE_SEL=1)
 
     print "program global register..."
@@ -244,12 +196,7 @@ if __name__ == "__main__":
 
 
     #settings for pixel register (to input into pixel SR)
-    # can be an integer representing the binary number desired,
-    # or a bitarray (of the form bitarray("10101100")).
-
-    #chip['PIXEL_REG'][:] = bitarray('1'*128)
-    #chip['PIXEL_REG'][0] = 0
-    chip.set_pixel_register(bitarray('0'+'1'*127))
+    chip.set_pixel_register('0'+'1'*127)
 
     print "program pixel register..."
     chip.write_pixel_reg(location=150)
@@ -271,7 +218,7 @@ if __name__ == "__main__":
     data = np.reshape(np.vstack((data1, data0)), -1, order='F') # data is now a 1 dimensional array of all bytes read from the FIFO
     bdata = np.unpackbits(data)#.reshape(-1,128)
 
-    #print "data = ", data
-    #print "bdata = ", bdata
+    print "data = ", data
+    print "bdata = ", bdata
 
     #print 'ids=', np.right_shift(np.bitwise_and(rxd, 0x0fff0000), 16)
