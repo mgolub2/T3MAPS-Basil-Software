@@ -153,7 +153,7 @@ registers:
         position : 4
       - name     : INJECTION
         position : 5
-      - name     : SLALTBUS
+      - name     : NOT_USED_0
         position : 6
       - name     : NOT_USED_1
         position : 7
