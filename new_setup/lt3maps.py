@@ -62,8 +62,9 @@ class Pixel(Dut):
         self['PWR'].write()
 
         # Set the output voltage on the pins
-        self['PWRAC'].set_voltage("VDDD1",1.2)
-        print "VDDD1", self['PWRAC'].get_voltage("VDDD1"), self['PWRAC'].get_current("VDDD1")
+        self['PWRAC'].set_voltage("VDDD1",1.5)
+        self['PWRAC'].set_voltage("VDDD2",1.5)
+        print "VD1:", self['PWRAC'].get_voltage("VDDD1"), "V", self['PWRAC'].get_current("VDDD1"), "A"
 
         # Make sure the chip is reset
         self.reset()
@@ -119,8 +120,8 @@ class Pixel(Dut):
         start_location = location
         stop_location = location + px_size
         self['SEQ']['SHIFT_IN'][start_location:stop_location] = self['PIXEL_REG'][:] # this will be shifted out
-        self['SEQ']['PIXEL_SHIFT_EN'][start_location:stop_location] = bitarray( px_size * '1') #this is to enable clock
-        
+        self['SEQ']['PIXEL_SHIFT_EN'][start_location:stop_location] = bitarray( px_size * '1') #this is to enable clock (12MHz)
+
         #self._run_seq(px_size+1) #add 1 bit more so there is 0 at the end other way will stay high
             
     def run_seq(self, size, num_executions=1, enable_receiver=True):
@@ -137,8 +138,6 @@ class Pixel(Dut):
         # Write the sequence to the sequence generator (hw driver)
         self['SEQ'].write(size) #write pattern to memory
 
-        # Enable SelAltBus (don't know why)
-        self['SEQ']['SLALTBUS'].setall(True)
         
         self['SEQ'].set_size(size)  # set size
         self['SEQ'].set_repeat(num_executions) # set repeat
@@ -182,43 +181,70 @@ class Pixel(Dut):
 
         """
         self['PIXEL_REG'][:] = bitarray(value)
-        
-        
+
+    def get_sr_output(self, invert=False):
+        """
+        Retrieve the output from the chip.
+
+        Returned as a list of (possibly inverted) bits.
+
+        """
+        # 1. Data emerges from hardware in the following form:
+        # [ 0b<nonsense><byte1><byte2>, 0b<nonsense><byte3><byte4>, ...]
+        # 2. So, take last 8 bits from each item to get even-numbered entries,
+        # 3. and 2nd-to-last 8 bits to get odd-numbered entries.
+        # 4. Then, weave the lists together.
+        # 5. To get the bits themselves, unpack the uint8's to a list of bits.
+
+        #1. get data from sram fifo
+        rxd = self['DATA'].get_data()
+        # 2. Change type to unsigned int 8 bits and take from rxd only the last 8 bits
+        data0 = rxd.astype(np.uint8)
+        # 3. Rightshift rxd 8 bits and take again last 8 bits
+        data1 = np.right_shift(rxd, 8).astype(np.uint8)
+        # 4. make data a 1 dimensional array of all bytes read from the FIFO
+        data = np.reshape(np.vstack((data1, data0)), -1, order='F')
+        # 5. make data into bits
+        bdata = np.unpackbits(data)
+        if invert:
+            # treat bits as bools (default is 8-bit numbers),
+            # then recast to ints.
+            bdata = np.invert(bdata, dtype=np.bool).astype(np.uint8)
+        return bdata
+
+    def get_output_size(self):
+        """
+        Returns the number of bits received as output.
+
+        """
+        byte_size = 8
+        return byte_size * self['DATA'].get_fifo_size()
+
 if __name__ == "__main__":
     # create a chip object
     chip = Pixel("lt3maps.yaml")
 
     #settings for global register (to input into global SR)
-    chip.set_global_register(config_mode=3, LDENABLE_SEL=1)
+    chip.set_global_register(config_mode=3, column_address=8)
 
     print "program global register..."
     chip.write_global_reg(location=0, load_DAC=True)
 
 
     #settings for pixel register (to input into pixel SR)
-    chip.set_pixel_register('0'+'1'*127)
+    chip.set_pixel_register('10'*8+'1000'*8+'10000000'*8+'1000000000000000')
 
     print "program pixel register..."
     chip.write_pixel_reg(location=150)
 
+    chip.set_pixel_register('1100'*32)
+
+    chip.write_pixel_reg(location=320)
+
     # send the commands to the chip
-    chip.run_seq(350, num_executions=0)
+    chip.run_seq(500, num_executions=1)
 
-    # Get output size in bytes
-    print "chip['DATA'].get_fifo_size() = ", chip['DATA'].get_fifo_size()
-        
-    # Get output in bytes
-    print "chip['DATA'].get_data()"
-    rxd = chip['DATA'].get_data() #get data from sram fifo
-    #print "rxd = ", rxd
-    #print "rxd(hex) = ", map(hex, rxd)
-
-    data0 = rxd.astype(np.uint8) # Change type to unsigned int 8 bits and take from rxd only the last 8 bits
-    data1 = np.right_shift(rxd, 8).astype(np.uint8) # Rightshift rxd 8 bits and take again last 8 bits
-    data = np.reshape(np.vstack((data1, data0)), -1, order='F') # data is now a 1 dimensional array of all bytes read from the FIFO
-    bdata = np.unpackbits(data)#.reshape(-1,128)
-
-    print "data = ", data
-    print "bdata = ", bdata
-
-    #print 'ids=', np.right_shift(np.bitwise_and(rxd, 0x0fff0000), 16)
+    # Get output back
+    print "chip output size:", chip.get_output_size()
+    print "chip output:"
+    print chip.get_sr_output(invert=True)
