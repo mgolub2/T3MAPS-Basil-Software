@@ -133,7 +133,7 @@ registers:
   - name        : PIXEL_REG
     type        : StdRegister
     driver      : None
-    size        : 128
+    size        : 64
 
   - name        : SEQ
     type        : TrackRegister
