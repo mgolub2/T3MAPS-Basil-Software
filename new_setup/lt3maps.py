@@ -33,6 +33,7 @@ class Pixel(Dut):
     _blocks = []
     _pixel_block_length = -1
     _global_block_length = -1
+    _injection_block_length = -1
     _global_dropped_bits = 2
 
     def __init__(self, conf_file_name=None, voltage=1.5, conf_dict=None):
@@ -76,6 +77,7 @@ class Pixel(Dut):
         self._pixel_block_length = len(self['PIXEL_REG'])
         # 2 extra for load commands, 1 for the 'dropped' bit due to clock
         self._global_block_length = len(self['GLOBAL_REG']) + 2 + self._global_dropped_bits
+        self._injection_block_length = 50 # arbitrary
 
         # Make sure the chip is reset
         self.reset_seq()
@@ -148,6 +150,21 @@ class Pixel(Dut):
         else:
             self._blocks.append(seq)
             
+    def write_injection(self, delay_until_rise):
+        """
+        Add an injection pattern (low then high) to the signal.
+
+        `delay` tells how many bits to wait until high again.
+        Should be less than the expected time till the next injection.
+        """
+        if delay_until_rise > self._injection_block_length:
+            raise ValueError("delay must be <= " + str(self._injection_block_length))
+
+        filler = self._injection_block_length - delay_until_rise
+        injection_sequence = Block({"INJECTION": bitarray('0'*delay_until_rise + '1' * filler)})
+        injection_sequence.type = 'injection'
+        self._blocks.append(injection_sequence)
+
     def run_seq(self, num_executions=1, enable_receiver=True):
         """
         Send the contents of self['SEQ'] to the chip and wait until it finishes.
@@ -183,15 +200,11 @@ class Pixel(Dut):
         - There should be some empty space between blocks. 
 
         """
-
-        # Add the extra set of zeroes to the end
-        #temp = self['PIXEL_REG'][:]
-        #self['PIXEL_REG'][:] = bitarray('0' * len(self['PIXEL_REG']))
-        #self.write_pixel_reg()
-        #self['PIXEL_REG'][:] = temp
-
-        # Add each block to self['SEQ']
         seq = self['SEQ']
+
+        # set up the INJECTION channel to be all high
+        seq['INJECTION'].setall(True)
+        # Add each block to self['SEQ']
         num_bits = 0
         buffer_length = 40
         start_location = 0
@@ -203,6 +216,8 @@ class Pixel(Dut):
                 end_location = start_location + self._pixel_block_length
             elif block.type == 'global':
                 end_location = start_location + self._global_block_length
+            elif block.type == 'injection':
+                end_location = start_location + self._injection_block_length
             else:
                 raise ValueError("block type set incorrectly! check source code")
 
