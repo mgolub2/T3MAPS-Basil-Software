@@ -73,7 +73,8 @@ class Pixel(Dut):
 
         # Set the "block lengths" for commands to pixel and global registers
         self._pixel_block_length = len(self['PIXEL_REG'])
-        self._global_block_length = len(self['GLOBAL_REG']) + 2 # for load commands
+        # 2 extra for load commands, 1 for the 'dropped' bit due to clock
+        self._global_block_length = len(self['GLOBAL_REG']) + 3
 
         # Make sure the chip is reset
         self.reset_seq()
@@ -90,22 +91,22 @@ class Pixel(Dut):
         gr_size = len(self['GLOBAL_REG'][:]) #get the size
         # define start and stop indices in the array
         seq = {
-            'SHIFT_IN': bitarray('0' * gr_size),
-            'GLOBAL_SHIFT_EN': bitarray('0' * gr_size),
-            'GLOBAL_CTR_LD': bitarray('0' * (gr_size + 2)),
-            'GLOBAL_DAC_LD': bitarray('0' * (gr_size + 2)),
+            'SHIFT_IN': bitarray('0' * (gr_size + 1)),
+            'GLOBAL_SHIFT_EN': bitarray('0' * (gr_size + 1)),
+            'GLOBAL_CTR_LD': bitarray('0' * (gr_size + 3)),
+            'GLOBAL_DAC_LD': bitarray('0' * (gr_size + 3)),
         }
         seq = Block(seq)
         seq.type = 'global'
 
         # input is the contents of global register
-        seq['SHIFT_IN'][0:gr_size] = self['GLOBAL_REG'][:]
+        seq['SHIFT_IN'][1:gr_size + 1] = self['GLOBAL_REG'][:]
         # Enable the clock
-        seq['GLOBAL_SHIFT_EN'][0:gr_size] = bitarray( gr_size * '1')
+        seq['GLOBAL_SHIFT_EN'][0:gr_size + 1] = bitarray( gr_size * '1')
         # load signals into the shadow register
-        seq['GLOBAL_CTR_LD'][gr_size + 1:gr_size + 2] = bitarray("1")
+        seq['GLOBAL_CTR_LD'][gr_size + 2:gr_size + 3] = bitarray("1")
         if load_DAC:
-            seq['GLOBAL_DAC_LD'][gr_size + 1:gr_size + 2] = bitarray("1")
+            seq['GLOBAL_DAC_LD'][gr_size + 2:gr_size + 3] = bitarray("1")
 
         # Make all patterns the same length
         # Find the max of all lengths of all patterns
