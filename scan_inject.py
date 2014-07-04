@@ -10,13 +10,28 @@ chip = Pixel("new_setup/lt3maps.yaml")
 chip.set_global_register(column_address=0)
 chip.write_global_reg()
 
-chip.set_pixel_register('0' * 5 + '1' + '0' * 58)
+chip.set_pixel_register('0'*63+ '1')
 chip.write_pixel_reg()
 
-chip.set_global_register(column_address = 0, LD_IN0_7=bitarray('01100000'), LDENABLE_SEL=1)
-chip.write_global_reg()
+chip.set_global_register(
+        column_address = 0,
+        #S0=1,
+        #HITLD_IN=1,
+        LD_IN0_7=bitarray('00000110'),
+        LDENABLE_SEL=1,
+        PrmpVbp=142,
+        PrmpVbf=11,
+        vth=150,
+        DisVbn=49,
+        VbpThStep=100,
+        PrmpVbnFol=35
+        )
 
-chip.set_global_register(column_address = 0, S0=1, HITLD_IN=1)
+chip.write_global_reg(load_DAC=True)
+
+print chip._blocks
+
+chip.set_global_register(column_address = 0, LD_IN0_7=0)
 chip.write_global_reg()
 
 chip.set_pixel_register('0'*64)
@@ -37,5 +52,5 @@ chip.run_seq()
 output = chip.get_sr_output(invert=True)
 for i in range(3):
     set_output = output[(64*i):(64*(i+1))]
-    print "output from shifting in", i, "th time:"
+    print "output", i
     print set_output
