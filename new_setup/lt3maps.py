@@ -246,6 +246,8 @@ class Pixel(Dut):
         for field in seq_fields:
             self['SEQ'][field].setall(False)
 
+        self._blocks = []
+
     def set_global_register(self, **kwargs):
         """
         Assign the values in given as parameters to the fields
