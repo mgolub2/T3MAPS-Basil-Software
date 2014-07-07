@@ -77,7 +77,8 @@ class Pixel(Dut):
         self._pixel_block_length = len(self['PIXEL_REG'])
         # 2 extra for load commands, 1 for the 'dropped' bit due to clock
         self._global_block_length = len(self['GLOBAL_REG']) + 2 + self._global_dropped_bits
-        self._injection_block_length = 50 # arbitrary
+        # arbitrary length, but long enough to be detected by discriminator.
+        self._injection_block_length = 500  
 
         # Make sure the chip is reset
         self.reset_seq()
