@@ -7,12 +7,16 @@ from new_setup.lt3maps import *
 chip = Pixel("new_setup/lt3maps.yaml")
 
 # enable injection on a particular pixel (column 0, pixel 5, for example)
+
+# select column 0
 chip.set_global_register(column_address=0)
 chip.write_global_reg()
 
+# mark pixel 64 (in this case) to be enabled
 chip.set_pixel_register('0'*63+ '1')
 chip.write_pixel_reg()
 
+# load the "enable" configuration
 chip.set_global_register(
         column_address = 0,
         #S0=1,
@@ -31,13 +35,17 @@ chip.write_global_reg(load_DAC=True)
 
 print chip._blocks
 
+# remove the "1" from the pixel shift register
+
+# first select the column
 chip.set_global_register(column_address = 0, LD_IN0_7=0)
 chip.write_global_reg()
 
+# then remove the 1
 chip.set_pixel_register('0'*64)
 chip.write_pixel_reg()
 
-# set up injection
+# set up injection pulse
 chip.write_injection(20)
 
 # get the output
