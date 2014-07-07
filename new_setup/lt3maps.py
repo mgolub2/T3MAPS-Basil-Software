@@ -104,7 +104,7 @@ class Pixel(Dut):
         seq.type = 'global'
 
         # input is the contents of global register
-        seq['SHIFT_IN'][self._global_dropped_bits:gr_size + self._global_dropped_bits] = self['GLOBAL_REG'][:]
+        seq['SHIFT_IN'][self._global_dropped_bits:gr_size + self._global_dropped_bits] = self.global_reg_reversed_DAC()
         # Enable the clock
         seq['GLOBAL_SHIFT_EN'][0:gr_size + self._global_dropped_bits] = bitarray( gr_size * '1')
         # load signals into the shadow register
@@ -315,6 +315,34 @@ class Pixel(Dut):
 
         """
         self['DATA'].reset()
+
+    def global_reg_reversed_DAC(self):
+        """
+        Get the global register, but with the dac bits reversed.
+
+        This is necessary for input to the chip.
+        
+        """
+        # a list of fields to reverse
+        reverse = [
+                'DisVbn',
+                'VbpThStep',
+                'PrmpVbp',
+                'PrmpVbnFol',
+                'vth',
+                'PrmpVbf'
+                ]
+        global_register = self['GLOBAL_REG']
+        for field in reverse:
+            global_register[field] = global_register[field][::-1]
+
+        to_return = global_register[:]
+
+        # now un-reverse the fields to return to normal
+        for field in reverse:
+            global_register[field] = global_register[field][::-1]
+
+        return to_return
 
 if __name__ == "__main__":
     # create a chip object

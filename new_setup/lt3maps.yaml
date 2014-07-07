@@ -58,57 +58,60 @@ registers:
   - name        : GLOBAL_REG
     type        : StdRegister
     driver      : None
-    size        : 144
+    size        : 176
     fields  : 
           - name     : global_readout_enable 
             size     : 1         
-            offset   : 143
+            offset   : 175
           - name     : SRDO_load 
             size     : 1         
-            offset   : 142
+            offset   : 174
           - name     : NCout2 
             size     : 1         
-            offset   : 141
+            offset   : 173
           - name     : count_hits_not
             size     : 1
-            offset   : 140
+            offset   : 172
           - name     : count_enable
             size     : 1
-            offset   : 139
+            offset   : 171
           - name     : count_clear_not
             size     : 1
-            offset   : 138
+            offset   : 170
           - name     : S0
             size     : 1
-            offset   : 137
+            offset   : 169
           - name     : S1
             size     : 1
-            offset   : 136
+            offset   : 168
           - name     : config_mode
             size     : 2
-            offset   : 135
+            offset   : 167
           - name     : LD_IN0_7
             size     : 8
-            offset   : 133
+            offset   : 165
           - name     : LDENABLE_SEL
             size     : 1
-            offset   : 125
+            offset   : 157
           - name     : SRCLR_SEL
             size     : 1
-            offset   : 124
+            offset   : 156
           - name     : HITLD_IN
             size     : 1
-            offset   : 123
+            offset   : 155
           - name     : NCout21_25
             size     : 5
-            offset   : 122
+            offset   : 154
           - name     : column_address
             size     : 6
-            offset   : 117
+            offset   : 149
+          - name     : EMPTY_0
+            size     : 32
+            offset   : 143
           - name     : DisVbn
             size     : 8
             offset   : 111
-          - name     : EMPTY_0
+          - name     : EMPTY_1
             size     : 48
             offset   : 103
           - name     : VbpThStep
@@ -126,7 +129,7 @@ registers:
           - name     : PrmpVbf
             size     : 8
             offset   : 23
-          - name     : EMPTY_1
+          - name     : EMPTY_2
             size     : 16
             offset   : 15
 
