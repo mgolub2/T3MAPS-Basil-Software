@@ -24,11 +24,11 @@ chip.set_global_register(
         LD_IN0_7=bitarray('00000000'),
         LDENABLE_SEL=0,
         PrmpVbp=24,
-        PrmpVbf=64,
+        PrmpVbf=2,
         vth=255,
         DisVbn=255,
-        VbpThStep=100,
-        PrmpVbnFol=34
+        VbpThStep=38,
+        PrmpVbnFol=68
         )
 
 chip.write_global_reg(load_DAC=True)
