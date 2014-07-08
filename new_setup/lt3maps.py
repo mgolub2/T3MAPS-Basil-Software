@@ -257,8 +257,18 @@ class Pixel(Dut):
         The values can be integers or bitarrays.
 
         """
+        self['GLOBAL_REG'][:]=0
         for key, value in kwargs.iteritems():
             self['GLOBAL_REG'][key] = value
+
+        empties = {
+            'EMPTY_0':32,
+            'EMPTY_1':48,
+            'EMPTY_2':16
+        }
+        empty_pattern = '10000001'
+        for key, value in empties.iteritems():
+            self['GLOBAL_REG'][key] = bitarray(empty_pattern * (value/8))
 
     def set_pixel_register(self, value):
         """
