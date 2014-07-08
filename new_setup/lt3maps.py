@@ -359,7 +359,7 @@ if __name__ == "__main__":
     chip = Pixel("lt3maps.yaml")
 
     #settings for global register (to input into global SR)
-    chip.set_global_register(config_mode=3, column_address=8)
+    chip.set_global_register(column_address=8)
 
     print "program global register..."
     chip.write_global_reg(load_DAC=True)
