@@ -6,7 +6,7 @@ import argparse
 from new_setup.lt3maps import *
 
 
-def test_columns(min_col, max_col):
+def test_columns(min_col, max_col, verbose):
     # initialize the chip
     chip = Pixel("new_setup/lt3maps.yaml")
 
@@ -19,7 +19,7 @@ def test_columns(min_col, max_col):
 
         chip.write_pixel_reg()
 
-        chip.set_pixel_register('1000'*16)
+        chip.set_pixel_register('1'*(i+1) + '0'*(16-(i+1)) + '0'*48)
 
         chip.write_pixel_reg()
 
@@ -27,16 +27,23 @@ def test_columns(min_col, max_col):
 
     output = chip.get_sr_output(invert=True)
 
+    results = []
     for i in range(min_col, max_col + 1):
         j = i-min_col
         column_output = output[(128*j):(128*(j+1))]
-        print "column", i
-        print column_output
+        desired_output = [0]*64 + [1] + [0]*i + [1] + [0]*(64-i-2)
+        results.append(all(column_output == desired_output))
+        if verbose:
+            print "column", i
+            print column_output
+
+    print "result:", all(results)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("min_col", help="the low column number to test", type=int)
     parser.add_argument("max_col", help="the high column number to test", type=int)
+    parser.add_argument("-v", "--verbose", help="print SR output", action="store_true")
     args = parser.parse_args()
-    test_columns(args.min_col, args.max_col)
+    test_columns(args.min_col, args.max_col, args.verbose)
