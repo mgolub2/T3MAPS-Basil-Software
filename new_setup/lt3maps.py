@@ -242,6 +242,19 @@ class Pixel(Dut):
         for key, value in kwargs.iteritems():
             self['GLOBAL_REG'][key] = value
 
+        empties = {
+            #'EMPTY_0':32,
+            'EMPTY_1':48,
+            'EMPTY_2':16
+        }
+        empty_pattern = '00000000'
+        for key, value in empties.iteritems():
+            self['GLOBAL_REG'][key] = bitarray(empty_pattern * (value/8))
+
+        # debug EMPTY_0's location
+        bits=bitarray('0'*30+'10')
+        self['GLOBAL_REG']['EMPTY_0']=bits
+
     def set_pixel_register(self, value):
         """
         Assign the given `value` to ['PIXEL_REG'].
@@ -304,21 +317,18 @@ if __name__ == "__main__":
 
     #settings for global register (to input into global SR)
     chip.set_global_register(config_mode=3, column_address=8)
-
-    print "program global register..."
     chip.write_global_reg(load_DAC=True)
 
 
     #settings for pixel register (to input into pixel SR)
     chip.set_pixel_register('10'*8+'1000'*8+'10000000'*2)
-
-    print "program pixel register..."
     chip.write_pixel_reg()
 
+    # send in a different (but nonzero) pattern to get out what we
+    # sent in before.
     chip.set_pixel_register('1100'*16)
 
     chip.write_pixel_reg()
-
     # send the commands to the chip
     chip.run_seq()
 
