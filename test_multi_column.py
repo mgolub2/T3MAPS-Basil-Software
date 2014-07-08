@@ -19,7 +19,7 @@ def test_columns(min_col, max_col, verbose):
 
         chip.write_pixel_reg()
 
-        chip.set_pixel_register('1000'*16)
+        chip.set_pixel_register('1'*(i+1) + '0'*(16-(i+1)) + '0'*48)
 
         chip.write_pixel_reg()
 
