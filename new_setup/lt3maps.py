@@ -33,6 +33,7 @@ class Pixel(Dut):
     _blocks = []
     _pixel_block_length = -1
     _global_block_length = -1
+    _injection_block_length = -1
     _global_dropped_bits = 2
 
     def __init__(self, conf_file_name=None, voltage=1.5, conf_dict=None):
@@ -76,6 +77,8 @@ class Pixel(Dut):
         self._pixel_block_length = len(self['PIXEL_REG'])
         # 2 extra for load commands, 1 for the 'dropped' bit due to clock
         self._global_block_length = len(self['GLOBAL_REG']) + 2 + self._global_dropped_bits
+        # arbitrary length, but long enough to be detected by discriminator.
+        self._injection_block_length = 500  
 
         # Make sure the chip is reset
         self.reset_seq()
@@ -101,7 +104,7 @@ class Pixel(Dut):
         seq.type = 'global'
 
         # input is the contents of global register
-        seq['SHIFT_IN'][self._global_dropped_bits:gr_size + self._global_dropped_bits] = self['GLOBAL_REG'][:]
+        seq['SHIFT_IN'][self._global_dropped_bits:gr_size + self._global_dropped_bits] = self._global_reg_reversed_DAC()
         # Enable the clock
         seq['GLOBAL_SHIFT_EN'][0:gr_size + self._global_dropped_bits] = bitarray( gr_size * '1')
         # load signals into the shadow register
@@ -148,6 +151,21 @@ class Pixel(Dut):
         else:
             self._blocks.append(seq)
             
+    def write_injection(self, delay_until_rise):
+        """
+        Add an injection pattern (low then high) to the signal.
+
+        `delay` tells how many bits to wait until high again.
+        Should be less than the expected time till the next injection.
+        """
+        if delay_until_rise > self._injection_block_length:
+            raise ValueError("delay must be <= " + str(self._injection_block_length))
+
+        filler = self._injection_block_length - delay_until_rise
+        injection_sequence = Block({"INJECTION": bitarray('0'*delay_until_rise + '1' * filler)})
+        injection_sequence.type = 'injection'
+        self._blocks.append(injection_sequence)
+
     def run_seq(self, num_executions=1, enable_receiver=True):
         """
         Send the contents of self['SEQ'] to the chip and wait until it finishes.
@@ -183,15 +201,11 @@ class Pixel(Dut):
         - There should be some empty space between blocks. 
 
         """
-
-        # Add the extra set of zeroes to the end
-        #temp = self['PIXEL_REG'][:]
-        #self['PIXEL_REG'][:] = bitarray('0' * len(self['PIXEL_REG']))
-        #self.write_pixel_reg()
-        #self['PIXEL_REG'][:] = temp
-
-        # Add each block to self['SEQ']
         seq = self['SEQ']
+
+        # set up the INJECTION channel to be all high
+        seq['INJECTION'].setall(True)
+        # Add each block to self['SEQ']
         num_bits = 0
         buffer_length = 40
         start_location = 0
@@ -203,6 +217,8 @@ class Pixel(Dut):
                 end_location = start_location + self._pixel_block_length
             elif block.type == 'global':
                 end_location = start_location + self._global_block_length
+            elif block.type == 'injection':
+                end_location = start_location + self._injection_block_length
             else:
                 raise ValueError("block type set incorrectly! check source code")
 
@@ -231,6 +247,8 @@ class Pixel(Dut):
         for field in seq_fields:
             self['SEQ'][field].setall(False)
 
+        self._blocks = []
+
     def set_global_register(self, **kwargs):
         """
         Assign the values in given as parameters to the fields
@@ -239,6 +257,7 @@ class Pixel(Dut):
         The values can be integers or bitarrays.
 
         """
+        self['GLOBAL_REG'][:]=0
         for key, value in kwargs.iteritems():
             self['GLOBAL_REG'][key] = value
 
@@ -311,12 +330,40 @@ class Pixel(Dut):
         """
         self['DATA'].reset()
 
+    def _global_reg_reversed_DAC(self):
+        """
+        Get the global register, but with the dac bits reversed.
+
+        This is necessary for input to the chip.
+        
+        """
+        # a list of fields to reverse
+        reverse = [
+                'DisVbn',
+                'VbpThStep',
+                'PrmpVbp',
+                'PrmpVbnFol',
+                'vth',
+                'PrmpVbf'
+                ]
+        global_register = self['GLOBAL_REG']
+        for field in reverse:
+            self['GLOBAL_REG'][field].reverse()
+
+        to_return = self['GLOBAL_REG'][:]
+
+        # now un-reverse the fields to return to normal
+        for field in reverse:
+            self['GLOBAL_REG'][field].reverse()
+
+        return to_return
+
 if __name__ == "__main__":
     # create a chip object
     chip = Pixel("lt3maps.yaml")
 
     #settings for global register (to input into global SR)
-    chip.set_global_register(config_mode=3, column_address=8)
+    chip.set_global_register(column_address=8)
     chip.write_global_reg(load_DAC=True)
 
 
