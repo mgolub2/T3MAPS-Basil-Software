@@ -27,9 +27,12 @@ def test_columns(min_col, max_col, verbose):
 
     output = chip.get_sr_output(invert=True)
 
+    results = []
     for i in range(min_col, max_col + 1):
         j = i-min_col
         column_output = output[(128*j):(128*(j+1))]
+        desired_output = [0]*64 + [1] + [0]*i + [1] + [0]*(64-i-2)
+        results.append(all(column_output == desired_output))
         if verbose:
             print "column", i
             print column_output
