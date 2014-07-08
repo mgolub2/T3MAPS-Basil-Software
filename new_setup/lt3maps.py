@@ -34,7 +34,7 @@ class Pixel(Dut):
     _pixel_block_length = -1
     _global_block_length = -1
     _injection_block_length = -1
-    _global_dropped_bits = 2
+    _global_dropped_bits = 0
 
     def __init__(self, conf_file_name=None, voltage=1.5, conf_dict=None):
         """
@@ -104,7 +104,7 @@ class Pixel(Dut):
         seq.type = 'global'
 
         # input is the contents of global register
-        seq['SHIFT_IN'][self._global_dropped_bits:gr_size + self._global_dropped_bits] = self._global_reg_reversed_DAC()
+        seq['SHIFT_IN'][self._global_dropped_bits:gr_size + self._global_dropped_bits] = self._global_reg_reversed()
         # Enable the clock
         seq['GLOBAL_SHIFT_EN'][0:gr_size + self._global_dropped_bits] = bitarray( gr_size * '1')
         # load signals into the shadow register
@@ -261,18 +261,16 @@ class Pixel(Dut):
         for key, value in kwargs.iteritems():
             self['GLOBAL_REG'][key] = value
 
+        # assign non-zero value to the unused regions,
+        # for debugging purposes
         empties = {
-            #'EMPTY_0':32,
+            'EMPTY_0':32,
             'EMPTY_1':48,
             'EMPTY_2':16
         }
-        empty_pattern = '00000000'
+        empty_pattern = '10000001'
         for key, value in empties.iteritems():
             self['GLOBAL_REG'][key] = bitarray(empty_pattern * (value/8))
-
-        # debug EMPTY_0's location
-        bits=bitarray('0'*30+'10')
-        self['GLOBAL_REG']['EMPTY_0']=bits
 
     def set_pixel_register(self, value):
         """
@@ -330,31 +328,24 @@ class Pixel(Dut):
         """
         self['DATA'].reset()
 
-    def _global_reg_reversed_DAC(self):
+    def _global_reg_reversed(self):
         """
-        Get the global register, but with the dac bits reversed.
+        Get the global register, with the bits in each field reversed.
 
         This is necessary for input to the chip.
         
         """
-        # a list of fields to reverse
-        reverse = [
-                'DisVbn',
-                'VbpThStep',
-                'PrmpVbp',
-                'PrmpVbnFol',
-                'vth',
-                'PrmpVbf'
-                ]
         global_register = self['GLOBAL_REG']
-        for field in reverse:
-            self['GLOBAL_REG'][field].reverse()
 
-        to_return = self['GLOBAL_REG'][:]
+        # reverse each field, save the result, then re-reverse
+        for field in global_register._fields:
+            global_register[field].reverse()
+
+        to_return = global_register[:]
 
         # now un-reverse the fields to return to normal
-        for field in reverse:
-            self['GLOBAL_REG'][field].reverse()
+        for field in global_register._fields:
+            global_register[field].reverse()
 
         return to_return
 
