@@ -266,7 +266,7 @@ class Pixel(Dut):
             'EMPTY_1':48,
             'EMPTY_2':16
         }
-        empty_pattern = '10000001'
+        empty_pattern = '00000000'
         for key, value in empties.iteritems():
             self['GLOBAL_REG'][key] = bitarray(empty_pattern * (value/8))
 
