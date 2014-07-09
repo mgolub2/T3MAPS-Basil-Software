@@ -83,8 +83,10 @@ chip.write_injection(400)
 chip.write_injection(400)
 chip.write_injection(400)
 
-# get the output
+chip.set_global_register(column_address=column_number)
+chip.write_global_reg()
 
+# get the output
 chip.set_pixel_register('0' * 64)
 chip.write_pixel_reg()
 
