@@ -2,9 +2,9 @@
 Inject charge onto the chip and see if we can see it.
 
 """
-from new_setup.lt3maps import *
+from lt3maps.lt3maps import *
 
-chip = Pixel("new_setup/lt3maps.yaml")
+chip = Pixel("lt3maps/lt3maps.yaml")
 column_number = 0
 
 # set up the global dac register

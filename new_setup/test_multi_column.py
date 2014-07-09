@@ -3,12 +3,12 @@ Test the ability of the lt3maps software to read and write to multiple columns.
 
 """
 import argparse
-from new_setup.lt3maps import *
+from lt3maps.lt3maps import *
 
 
 def test_columns(min_col, max_col, verbose):
     # initialize the chip
-    chip = Pixel("new_setup/lt3maps.yaml")
+    chip = Pixel("lt3maps/lt3maps.yaml")
 
     for i in range(min_col,max_col+1):
         chip.set_global_register(column_address=i)
