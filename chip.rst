@@ -1,6 +1,0 @@
-Chip
-====
-
-.. automodule:: shiftregister
-   :members:
-

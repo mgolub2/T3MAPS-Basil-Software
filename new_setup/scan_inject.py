@@ -2,9 +2,9 @@
 Inject charge onto the chip and see if we can see it.
 
 """
-from new_setup.lt3maps import *
+from lt3maps.lt3maps import *
 
-chip = Pixel("new_setup/lt3maps.yaml")
+chip = Pixel("lt3maps/lt3maps.yaml")
 column_number = 0
 
 # set up the global dac register
@@ -43,7 +43,7 @@ chip.write_pixel_reg()
 # latches become transparent
 chip.set_global_register(
         column_address=column_number,
-        LD_IN0_7=bitarray('00000110'),
+        LD_IN0_7=bitarray('01100000'),
         LDENABLE_SEL=1,
         )
 chip.write_global_reg()
