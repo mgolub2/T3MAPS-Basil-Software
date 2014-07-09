@@ -31,9 +31,7 @@ class Pixel(Dut):
     """
 
     _blocks = []
-    _pixel_block_length = -1
-    _global_block_length = -1
-    _injection_block_length = -1
+    _block_lengths = {}
     _global_dropped_bits = 0
 
     def __init__(self, conf_file_name=None, voltage=1.5, conf_dict=None):
@@ -74,11 +72,11 @@ class Pixel(Dut):
         #print "VD1:", self['PWRAC'].get_voltage("VDDD1"), "V", self['PWRAC'].get_current("VDDD1"), "A"
 
         # Set the "block lengths" for commands to pixel and global registers
-        self._pixel_block_length = len(self['PIXEL_REG'])
+        self._block_lengths['pixel'] = len(self['PIXEL_REG'])
         # 2 extra for load commands, 1 for the 'dropped' bit due to clock
-        self._global_block_length = len(self['GLOBAL_REG']) + 2 + self._global_dropped_bits
+        self._block_lengths['global'] = len(self['GLOBAL_REG']) + 2 + self._global_dropped_bits
         # arbitrary length, but long enough to be detected by discriminator.
-        self._injection_block_length = 500  
+        self._block_lengths['inject'] = 500  
 
         # Make sure the chip is reset
         self.reset_seq()
@@ -158,12 +156,12 @@ class Pixel(Dut):
         `delay` tells how many bits to wait until high again.
         Should be less than the expected time till the next injection.
         """
-        if delay_until_rise > self._injection_block_length:
-            raise ValueError("delay must be <= " + str(self._injection_block_length))
+        if delay_until_rise > self._block_lengths['inject']:
+            raise ValueError("delay must be <= " + str(self._block_lengths['inject']))
 
-        filler = self._injection_block_length - delay_until_rise
+        filler = self._block_lengths['inject'] - delay_until_rise
         injection_sequence = Block({"INJECTION": bitarray('0'*delay_until_rise + '1' * filler)})
-        injection_sequence.type = 'injection'
+        injection_sequence.type = 'inject'
         self._blocks.append(injection_sequence)
 
     def run_seq(self, num_executions=1, enable_receiver=True):
@@ -210,30 +208,28 @@ class Pixel(Dut):
         buffer_length = 40
         start_location = 0
         end_location = 0
+        num_bits_in_seq = 0
         for i, block in enumerate(self._blocks):
             # First find the type of block: pixel or global
             # This determines the length of the block
-            if block.type == 'pixel':
-                end_location = start_location + self._pixel_block_length
-            elif block.type == 'global':
-                end_location = start_location + self._global_block_length
-            elif block.type == 'injection':
-                # can't start a SEQ with an injection,
-                # since injection signals are low, and
-                # the default is high.
-                # Fix by moving first block forwards.
-                if start_location == 0:
-                    start_location = self._injection_block_length
-                end_location = start_location + self._injection_block_length
-            else:
-                raise ValueError("block type set incorrectly! check source code")
+            num_bits_in_seq = self._block_lengths[block.type]
+            end_location = start_location + num_bits_in_seq
+
+            # can't start a SEQ with an injection,
+            # since injection signals are low, and
+            # the default is high.
+            # Fix by moving first block forwards by 1 injection block.
+            if start_location == 0 and block.type == 'inject':
+                start_location += self._block_lengths[block.type]
+                end_location += self._block_lengths[block.type]
+                num_bits_in_seq += self._block_lengths[block.type]
 
             # Write each of the fields of the block to self['SEQ']
             for key, value in block.iteritems():
                 seq[key][start_location:end_location] = value
 
             # record how many bits were written
-            num_bits += (end_location - start_location) + buffer_length
+            num_bits += num_bits_in_seq + buffer_length
 
             # Move the next start location
             start_location = end_location + buffer_length
