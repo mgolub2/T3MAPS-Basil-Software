@@ -1,4 +1,4 @@
 atlas_usbpix_control
 ====================
 
-Controlling a USBpix board using pyBAR
+Controlling a T3MAPS pixel detector using USBpix board, basil and python.
