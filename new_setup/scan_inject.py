@@ -56,8 +56,6 @@ chip.set_global_register(
         )
 chip.write_global_reg()
 
-print chip._blocks
-
 # remove the "1" from the pixel shift register
 chip.set_pixel_register('0'*64)
 chip.write_pixel_reg()
@@ -77,11 +75,8 @@ time.sleep(2)
 chip.reset_seq()
 
 # set up injection pulse
-chip.write_injection(400)
-chip.write_injection(400)
-chip.write_injection(400)
-chip.write_injection(400)
-chip.write_injection(400)
+for i in range(3):
+    chip.write_injection(400)
 
 chip.set_global_register(column_address=column_number)
 chip.write_global_reg()
