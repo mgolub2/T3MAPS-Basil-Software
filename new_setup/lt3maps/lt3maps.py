@@ -210,7 +210,7 @@ class Pixel(Dut):
         buffer_length = 40
         start_location = 0
         end_location = 0
-        for block in self._blocks:
+        for i, block in enumerate(self._blocks):
             # First find the type of block: pixel or global
             # This determines the length of the block
             if block.type == 'pixel':
@@ -218,6 +218,12 @@ class Pixel(Dut):
             elif block.type == 'global':
                 end_location = start_location + self._global_block_length
             elif block.type == 'injection':
+                # can't start a SEQ with an injection,
+                # since injection signals are low, and
+                # the default is high.
+                # Fix by moving first block forwards.
+                if start_location == 0:
+                    start_location = self._injection_block_length
                 end_location = start_location + self._injection_block_length
             else:
                 raise ValueError("block type set incorrectly! check source code")
