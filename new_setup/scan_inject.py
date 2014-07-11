@@ -5,19 +5,8 @@ Inject charge onto the chip and see if we can see it.
 from lt3maps.lt3maps import *
 
 chip = Pixel("lt3maps/lt3maps.yaml")
-column_number = 0
 
 # set up the global dac register
-"""
-chip.set_global_register(
-        PrmpVbp=142,
-        PrmpVbf=11,
-        vth=255,
-        DisVbn=255,
-        VbpThStep=38,
-        PrmpVbnFol=68
-        )
-"""
 chip.set_global_register(
         PrmpVbp=142,
         PrmpVbf=11,
@@ -29,9 +18,10 @@ chip.set_global_register(
         )
 chip.write_global_reg(load_DAC=True)
 
-# enable injection on a particular pixel (column 0, pixel 5, for example)
+# enable injection on a particular pixel
 
 # select column 0
+column_number = 0
 chip.set_global_register(column_address=column_number)
 chip.write_global_reg()
 
@@ -43,7 +33,7 @@ chip.write_pixel_reg()
 # latches become transparent
 chip.set_global_register(
         column_address=column_number,
-        LD_IN0_7=bitarray('01100000'),
+        LD_IN0_7=bitarray('00110000'),
         LDENABLE_SEL=1,
         )
 chip.write_global_reg()
@@ -57,9 +47,8 @@ chip.set_global_register(
 chip.write_global_reg()
 
 # remove the "1" from the pixel shift register
-chip.set_pixel_register('0'*64)
-chip.write_pixel_reg()
-
+#chip.set_pixel_register('0'*64)
+#chip.write_pixel_reg()
 
 # run
 chip.run_seq()
@@ -71,7 +60,8 @@ for i in range(2):
     print "output", i
     print set_output
 
-time.sleep(2)
+"""
+time.sleep(0.02)
 chip.reset_seq()
 
 # set up injection pulse
@@ -93,3 +83,4 @@ for i in range(2,3):
     set_output = output[(64*(i-2)):(64*(i-1))]
     print "output", i
     print set_output
+"""
