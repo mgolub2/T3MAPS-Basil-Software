@@ -259,6 +259,8 @@ class Pixel(Dut):
         """
         self['GLOBAL_REG'][:]=0
         for key, value in kwargs.iteritems():
+            if isinstance(value, bitarray):
+                value.reverse()
             self['GLOBAL_REG'][key] = value
 
         # assign non-zero value to the unused regions,
@@ -269,7 +271,7 @@ class Pixel(Dut):
             'EMPTY_2':16
         }
         for key, value in empties.iteritems():
-            self['GLOBAL_REG'][key] = bitarray(empty_pattern * (value/8))
+            self['GLOBAL_REG'][key] = bitarray((empty_pattern * (value/8))[::-1])
 
     def set_pixel_register(self, value):
         """
