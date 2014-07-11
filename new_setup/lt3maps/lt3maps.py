@@ -249,7 +249,7 @@ class Pixel(Dut):
 
         self._blocks = []
 
-    def set_global_register(self, **kwargs):
+    def set_global_register(self, empty_pattern="10000001", **kwargs):
         """
         Assign the values in given as parameters to the fields
         in ['GLOBAL_REG'].
@@ -268,7 +268,6 @@ class Pixel(Dut):
             'EMPTY_1':48,
             'EMPTY_2':16
         }
-        empty_pattern = '10000001'
         for key, value in empties.iteritems():
             self['GLOBAL_REG'][key] = bitarray(empty_pattern * (value/8))
 

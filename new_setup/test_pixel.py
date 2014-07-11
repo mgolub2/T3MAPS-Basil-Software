@@ -20,7 +20,8 @@ class TestPixel(unittest.TestCase):
         chip = self.chip
         chip.set_global_register(
             PrmpVbf=253,
-            LD_IN0_7=253
+            LD_IN0_7=253,
+            empty_pattern="00000000"
             )
 
         desired_pattern = bitarray("0"*176)
@@ -36,7 +37,8 @@ class TestPixel(unittest.TestCase):
         chip = self.chip
         chip.set_global_register(
             PrmpVbf=253,
-            LD_IN0_7=253
+            LD_IN0_7=253,
+            empty_pattern="00000000"
             )
 
         chip.write_global_reg()
