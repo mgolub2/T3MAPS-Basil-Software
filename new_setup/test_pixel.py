@@ -47,7 +47,9 @@ class TestPixel(unittest.TestCase):
         desired_pattern_shift_in[158:166] = True
         desired_pattern_shift_in[164] = False
 
+        self.assertEqual(len(desired_pattern_shift_in), len(chip._blocks[-1]['SHIFT_IN'][:]))
         self.assertEqual(desired_pattern_shift_in, chip._blocks[-1]['SHIFT_IN'][:])
+        self.assertEqual(False, chip._blocks[-1]['GLOBAL_DAC_LD'][-1])
 
 if __name__ == "__main__":
     unittest.main()
