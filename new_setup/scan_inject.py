@@ -33,7 +33,7 @@ chip.write_pixel_reg()
 # latches become transparent
 chip.set_global_register(
         column_address=column_number,
-        LD_IN0_7=bitarray('00110000'),
+        LD_IN0_7=bitarray('00000110'),
         LDENABLE_SEL=1,
         )
 chip.write_global_reg()
