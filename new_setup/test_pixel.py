@@ -17,7 +17,7 @@ class TestPixel(unittest.TestCase):
     def _setUp_global_register(self):
         self.chip.set_global_register(
             PrmpVbf=253, # will be output as "10111111"
-            LD_IN0_7=253,
+            LD_IN0_7=bitarray("11111101"), # will be output as "10111111"
             empty_pattern="00000000"
             )
 
@@ -37,7 +37,6 @@ class TestPixel(unittest.TestCase):
     def test_write_global_reg(self):
         chip = self.chip
         self._setUp_global_register()
-
         chip.write_global_reg()
 
         desired_pattern_shift_in = bitarray("0"*178)
