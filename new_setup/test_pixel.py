@@ -14,13 +14,16 @@ class TestPixel(unittest.TestCase):
     def tearDown(self):
         del self.chip
 
-    def test_set_global_register(self):
-        chip = self.chip
-        chip.set_global_register(
-            PrmpVbf=253,
+    def _setUp_global_register(self):
+        self.chip.set_global_register(
+            PrmpVbf=253, # will be output as "10111111"
             LD_IN0_7=253,
             empty_pattern="00000000"
             )
+
+    def test_set_global_register(self):
+        chip = self.chip
+        self._setUp_global_register()
 
         desired_pattern = bitarray("0"*176)
         desired_pattern[16:24] = True
@@ -31,13 +34,9 @@ class TestPixel(unittest.TestCase):
         self.assertEqual(len(desired_pattern), len(chip['GLOBAL_REG'][:]))
         self.assertEqual(desired_pattern, chip['GLOBAL_REG'][:])
 
-    def test_write_global_reg_no_DAC(self):
+    def test_write_global_reg(self):
         chip = self.chip
-        chip.set_global_register(
-            PrmpVbf=253,
-            LD_IN0_7=253,
-            empty_pattern="00000000"
-            )
+        self._setUp_global_register()
 
         chip.write_global_reg()
 
@@ -49,7 +48,20 @@ class TestPixel(unittest.TestCase):
 
         self.assertEqual(len(desired_pattern_shift_in), len(chip._blocks[-1]['SHIFT_IN'][:]))
         self.assertEqual(desired_pattern_shift_in, chip._blocks[-1]['SHIFT_IN'][:])
+
+    def test_write_global_reg_no_DAC(self):
+        chip = self.chip
+        self._setUp_global_register()
+        chip.write_global_reg()
+        print chip._blocks[-1]['GLOBAL_DAC_LD'][:]
         self.assertEqual(False, chip._blocks[-1]['GLOBAL_DAC_LD'][-1])
 
+    def test_write_global_reg_yes_DAC(self):
+        chip = self.chip
+        self._setUp_global_register()
+        chip.write_global_reg(load_DAC=True)
+        print chip._blocks[-1]['GLOBAL_DAC_LD'][:]
+        self.assertEqual(True, chip._blocks[-1]['GLOBAL_DAC_LD'][-1])
+
 if __name__ == "__main__":
-    unittest.main()
+    unittest.main(buffer=True)
