@@ -8,13 +8,11 @@ class TestPixel(unittest.TestCase):
 
     """
     def setUp(self):
-        time.sleep(5)
         # initialize the chip
         self.chip = Pixel("lt3maps/lt3maps.yaml")
 
     def tearDown(self):
-        #self.chip._transfer_layer['usb'].close()
-        pass
+        del self.chip
 
     def test_set_global_register(self):
         chip = self.chip
