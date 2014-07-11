@@ -3,6 +3,11 @@ Inject charge onto the chip and see if we can see it.
 
 """
 from lt3maps.lt3maps import *
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument("column_number", type=int)
+args = parser.parse_args()
 
 chip = Pixel("lt3maps/lt3maps.yaml")
 
@@ -21,7 +26,7 @@ chip.write_global_reg(load_DAC=True)
 # enable injection on a particular pixel
 
 # select column 0
-column_number = 0
+column_number = args.column_number
 chip.set_global_register(column_address=column_number)
 chip.write_global_reg()
 
@@ -53,6 +58,7 @@ chip.write_global_reg()
 # run
 chip.run_seq()
 
+"""
 # output
 output = chip.get_sr_output(invert=True)
 for i in range(2):
@@ -60,7 +66,6 @@ for i in range(2):
     print "output", i
     print set_output
 
-"""
 time.sleep(0.02)
 chip.reset_seq()
 
