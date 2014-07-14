@@ -1,15 +1,14 @@
-#
-# ------------------------------------------------------------
-# Copyright (c) All rights reserved
-# SiLab, Institute of Physics, University of Bonn
-# ------------------------------------------------------------
-#
-# SVN revision information:
-#  $Rev::                       $:
-#  $Author::                    $:
-#  $Date::                      $:
-#
+"""
+Module lt3maps.
 
+Author: Sam Kohn <kohn@berkeley.edu>
+
+This module enables communication between Python and hardware using the
+BASIL framework developed by SiLab, University of Bonn, Germany.
+
+See the class Pixel description for more information.
+
+"""
 import yaml
 import numpy as np
 import time
@@ -28,19 +27,77 @@ class Pixel(Dut):
     """
     A class for communicating with a pixel chip.
 
+    This class manages all communications between the programmer and
+    the hardware. It knows about configuration registers, injection,
+    pixel registers, and clocks.
+
+    It is implemented as a subclass of basil.dut.Dut, the base class
+    of the BASIL framework from SiLab, University of Bonn, Germany.
+    The documentation for BASIL is available at
+    <https://silab-redmine.physik.uni-bonn.de/projects/basil/wiki>.
+    In particular, this class is based on the Pixel example, so to
+    learn about why certain methods are implemented the way they are,
+    start from that example.
+
+    To configure the data structures the software uses, provide a
+    YAML file (<http://en.wikipedia.org/wiki/YAML>) which is based
+    off lt3maps.yaml. There are instructions
+    in that file's comments for how the file is interpreted.
+
+    A minimum working example looks like the following:
+
+    >>> chip = Pixel("config.yaml")
+    >>> chip.set_configuration_register(column_address=5)
+    >>> chip.write_configuration_reg()
+    >>> chip.set_pixel_register("10"*32)
+    >>> chip.write_pixel_reg()
+    >>> chip.run_seq()
+    >>> output = chip.get_sr_output()
+    >>> print "output:", output
+
     """
 
     _blocks = []
+    """
+    A list of pattern sets (blocks) to send to the chip.
+
+    Each block is a complete command, including shift register input,
+    load commands, and enable commands.
+
+    Note: enable commands are not sent to the chip, but rather
+    are interpreted by the FPGA as a sign to send a clock signal
+    to the chip.
+
+    """
     _pixel_block_length = -1
+    """
+    The number of bits in a pixel block (command).
+
+    """
     _global_block_length = -1
+    """
+    The number of bits in a global configuration block (command).
+
+    """
     _injection_block_length = -1
+    """
+    The number of bits in an injection block (command).
+
+    """
     _global_dropped_bits = 0
+    """
+    For debugging only. Changes the offset of configuration commands.
+
+    """
 
     def __init__(self, conf_file_name=None, voltage=1.5, conf_dict=None):
         """
         Initializes the chip, including turning on power.
 
         Exactly one of conf_file_name and conf_dict must be specified.
+
+        This method also initializes the block lengths to their
+        appropriate values.
         """
         if not (bool(conf_file_name) != bool(conf_dict)):
             raise ValueError("Exactly one of conf_file_name and conf_dict must be specified.")
@@ -88,7 +145,9 @@ class Pixel(Dut):
         Add the global register to the command to send to the chip.
 
         Includes enabling the clock, and loading the Control (CTR)
-        and DAC shadow registers.
+        and DAC shadow registers. By default, the DAC register is
+        NOT loaded. To load it, set the load_DAC parameter to
+        True.
 
         """
         
@@ -155,7 +214,7 @@ class Pixel(Dut):
         """
         Add an injection pattern (low then high) to the signal.
 
-        `delay` tells how many bits to wait until high again.
+        `delay_until_rise` tells how many bits to wait until high again.
         Should be less than the expected time till the next injection.
         """
         if delay_until_rise > self._injection_block_length:
@@ -168,10 +227,14 @@ class Pixel(Dut):
 
     def run_seq(self, num_executions=1, enable_receiver=True):
         """
-        Send the contents of self['SEQ'] to the chip and wait until it finishes.
+        Send all commands to the chip.
 
-        if(enable_receiver), stores the output (by byte) in
-        self['DATA'], retrievable via `chip['DATA'].get_data()`.
+        if(enable_receiver) (true by default), stores the output (by
+        byte) in self['DATA'], retrievable via
+        `chip['DATA'].get_data()`.
+
+        if num_executions > 0, run that many times (hardware loop).
+        if num_executions == 0, loop indefinitely.
 
         """
         #enable receiver it work only if pixel register is enabled/clocked
@@ -196,9 +259,10 @@ class Pixel(Dut):
         """
         Write the commands stored in _blocks to self['SEQ'].
 
-        Takes into account all sorts of ``manual adjustments.''
-        Currently these are:
-        - There should be some empty space between blocks. 
+        Includes some empty space between blocks to separate commands.
+
+        Returns the number of bits which should be sent to
+        self['SEQ'].set_size.
 
         """
         seq = self['SEQ']
@@ -236,7 +300,23 @@ class Pixel(Dut):
 
     def reset_seq(self, seq_fields=None):
         """
-        Reset the given fields of the ['SEQ'] register to all 0's.
+        Erase all data which was previously set up to go to the chip.
+
+        This is sufficient to make the Pixel object's outputs behave
+        as if the object is new. It does not affect the object's inputs,
+        in particular the input from the shift register's output.
+
+        Options for fields are the fields of the SEQ register specified
+        in the YAML configuration file. For example, they could be:
+
+        - SHIFT_IN
+        - GLOBAL_SHIFT_EN
+        - GLOBAL_CTR_LD
+        - GLOBAL_DAC_LD
+        - PIXEL_SHIFT_EN
+        - INJECTION
+        - NOT_USED_0
+        - NOT_USED_1
 
         If no fields are given, resets all fields (entire register).
 
@@ -251,10 +331,24 @@ class Pixel(Dut):
 
     def set_global_register(self, empty_pattern="10000001", **kwargs):
         """
-        Assign the values in given as parameters to the fields
-        in ['GLOBAL_REG'].
+        Set the values in the global register using keyword arguments.
 
-        The values can be integers or bitarrays.
+        Any unspecified fields are initialized to all 0.
+
+        The parameters can be integers or bitarrays. Integers will be
+        converted to bitarrays of the appropriate length. They are
+        represented as Big-Endian, meaning the leftmost bit gets
+        sent first. This matches the convention used by the T3MAPS
+        chip, so there is no conversion necessary. Bitarrays should
+        already be the appropriate length, so please do not try to
+        assign an 8-bit field to bitarray("1"). Instead, use
+        bitarray("00000001"). The order of the bits is also Big-Endian,
+        so the leftmost bit is sent first.
+
+        `empty_pattern` specifies a set of bits to use as padding
+        for sections of the global register which are not used by
+        the chip. This behavior is currently hardcoded in, although
+        it would be a good improvement to make this behavior adjustable.
 
         """
         self['GLOBAL_REG'][:]=0
@@ -275,11 +369,13 @@ class Pixel(Dut):
 
     def set_pixel_register(self, value):
         """
-        Assign the given `value` to ['PIXEL_REG'].
+        Set the value of the pixel register.
 
         `value` must be a bitarray, string of bits, or iterable
         of booleans. The length must match the length of the
         register.
+
+        The bits are sent leftmost-first to the chip.
 
         """
         self['PIXEL_REG'][:] = bitarray(value)
@@ -289,6 +385,9 @@ class Pixel(Dut):
         Retrieve the output from the chip.
 
         Returned as a list of (possibly inverted) bits.
+
+        Make sure to save the return value, since this
+        method only works once.
 
         """
         # 1. Data emerges from hardware in the following form:
@@ -300,11 +399,13 @@ class Pixel(Dut):
 
         #1. get data from sram fifo
         rxd = self['DATA'].get_data()
-        # 2. Change type to unsigned int 8 bits and take from rxd only the last 8 bits
+        # 2. Take from rxd only the last 8 bits of each element.
+        #    Do this by casting the elements of the list to uint8.
         data0 = rxd.astype(np.uint8)
         # 3. Rightshift rxd 8 bits and take again last 8 bits
         data1 = np.right_shift(rxd, 8).astype(np.uint8)
-        # 4. make data a 1 dimensional array of all bytes read from the FIFO
+        # 4. Make data a 1 dimensional array of all bytes read from the FIFO
+        #    This magic is accomplished with "FORTRAN" order reshaping.
         data = np.reshape(np.vstack((data1, data0)), -1, order='F')
         # 5. make data into bits
         bdata = np.unpackbits(data)
@@ -317,6 +418,8 @@ class Pixel(Dut):
     def get_output_size(self):
         """
         Returns the number of bits received as output.
+
+        This should be called before calling `get_sr_output`.
 
         """
         byte_size = 8
