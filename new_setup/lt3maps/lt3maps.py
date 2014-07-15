@@ -16,6 +16,7 @@ from bitarray import bitarray
 
 from basil.dut import Dut
 
+
 class Block(dict):
     """
     A class for storing patterns to be written to the chip.
@@ -23,26 +24,27 @@ class Block(dict):
     """
     type = None
 
+
 class Pixel(Dut):
     """
     A class for communicating with a pixel chip.
 
-    This class manages all communications between the programmer and
-    the hardware. It knows about configuration registers, injection,
-    pixel registers, and clocks.
+    This class manages all communications between the programmer and the
+    hardware. It knows about configuration registers, injection, pixel
+    registers, and clocks.
 
-    It is implemented as a subclass of basil.dut.Dut, the base class
-    of the BASIL framework from SiLab, University of Bonn, Germany.
-    The documentation for BASIL is available at
-    <https://silab-redmine.physik.uni-bonn.de/projects/basil/wiki>.
-    In particular, this class is based on the Pixel example, so to
-    learn about why certain methods are implemented the way they are,
-    start from that example.
+    It is implemented as a subclass of basil.dut.Dut, the base
+    class of the BASIL framework from SiLab, University of
+    Bonn, Germany. The documentation for BASIL is available at
+    <https://silab-redmine.physik.uni-bonn.de/projects/basil/wiki>. In
+    particular, this class is based on the Pixel example, so to learn
+    about why certain methods are implemented the way they are, start
+    from that example.
 
-    To configure the data structures the software uses, provide a
-    YAML file (<http://en.wikipedia.org/wiki/YAML>) which is based
-    off lt3maps.yaml. There are instructions
-    in that file's comments for how the file is interpreted.
+    To configure the data structures the software uses, provide a YAML
+    file (<http://en.wikipedia.org/wiki/YAML>) which is based off
+    lt3maps.yaml. There are instructions in that file's comments for how
+    the file is interpreted.
 
     A minimum working example looks like the following:
 
@@ -64,12 +66,19 @@ class Pixel(Dut):
     Each block is a complete command, including shift register input,
     load commands, and enable commands.
 
-    Note: enable commands are not sent to the chip, but rather
-    are interpreted by the FPGA as a sign to send a clock signal
-    to the chip.
+    Note: enable commands are not sent to the chip, but rather are
+    interpreted by the FPGA as a sign to send a clock signal to the
+    chip.
 
     """
     _block_lengths = {}
+    """
+    A dict associating command types to the size of the command.
+
+    Command types could be e.g. "inject," "global" (register) or "pixel"
+    (register). The size of the command is in bits.
+
+    """
     _global_dropped_bits = 0
     """
     For debugging only. Changes the offset of configuration commands.
@@ -86,24 +95,23 @@ class Pixel(Dut):
         appropriate values.
         """
         if not (bool(conf_file_name) != bool(conf_dict)):
-            raise ValueError("Exactly one of conf_file_name and conf_dict must be specified.")
+            raise ValueError("conf_file_name xor conf_dict must be specified.")
         elif conf_file_name:
             # Read in the configuration YAML file
             stream = open(conf_file_name, 'r')
             conf_dict = yaml.load(stream)
-        else: # conf_dict must be specified
+        else:  # conf_dict must be specified
             pass
 
         # Create the Pixel object
-        #chip = Pixel(conf_dict)
-        Dut.__init__(self,conf_dict)
+        Dut.__init__(self, conf_dict)
 
-        try:      
+        try:
             # Initialize the chip
             self.init()
-        except NotImplementedError: # this is to make simulation not fail
+        except NotImplementedError:  # this is to make simulation not fail
             print 'chip.init() :: NotImplementedError'
-            
+
         # turn on the adapter card's power
         self['PWR']['EN_VD1'] = 1
         self['PWR']['EN_VD2'] = 1
@@ -112,16 +120,16 @@ class Pixel(Dut):
         self['PWR'].write()
 
         # Set the output voltage on the pins
-        self['PWRAC'].set_voltage("VDDD1",voltage)
-        self['PWRAC'].set_voltage("VDDD2",voltage)
-        #print "VD1:", self['PWRAC'].get_voltage("VDDD1"), "V", self['PWRAC'].get_current("VDDD1"), "A"
+        self['PWRAC'].set_voltage("VDDD1", voltage)
+        self['PWRAC'].set_voltage("VDDD2", voltage)
 
         # Set the "block lengths" for commands to pixel and global registers
         self._block_lengths['pixel'] = len(self['PIXEL_REG'])
         # 2 extra for load commands, 1 for the 'dropped' bit due to clock
-        self._block_lengths['global'] = len(self['GLOBAL_REG']) + 2 + self._global_dropped_bits
+        self._block_lengths['global'] = len(self['GLOBAL_REG']) + 2 +\
+            self._global_dropped_bits
         # arbitrary length, but long enough to be detected by discriminator.
-        self._block_lengths['inject'] = 500  
+        self._block_lengths['inject'] = 500
 
         # Make sure the chip is reset
         self.reset_seq()
@@ -131,31 +139,40 @@ class Pixel(Dut):
         Add the global register to the command to send to the chip.
 
         Includes enabling the clock, and loading the Control (CTR)
-        and DAC shadow registers. By default, the DAC register is
-        NOT loaded. To load it, set the load_DAC parameter to
-        True.
+        and DAC shadow registers. By default, the DAC register is NOT
+        loaded. To load it, set the load_DAC parameter to True.
 
         """
-        
-        gr_size = len(self['GLOBAL_REG'][:]) #get the size
+
+        gr_size = len(self['GLOBAL_REG'][:])  # get the size
         # define start and stop indices in the array
         seq = {
             'SHIFT_IN': bitarray('0' * (gr_size + self._global_dropped_bits)),
-            'GLOBAL_SHIFT_EN': bitarray('0' * (gr_size + self._global_dropped_bits)),
-            'GLOBAL_CTR_LD': bitarray('0' * (gr_size + 2 + self._global_dropped_bits)),
-            'GLOBAL_DAC_LD': bitarray('0' * (gr_size + 2 + self._global_dropped_bits)),
+            'GLOBAL_SHIFT_EN': bitarray('0' * (gr_size +
+                                        self._global_dropped_bits)),
+            'GLOBAL_CTR_LD': bitarray('0' * (gr_size + 2 +
+                                      self._global_dropped_bits)),
+            'GLOBAL_DAC_LD': bitarray('0' * (gr_size + 2 +
+                                      self._global_dropped_bits)),
         }
         seq = Block(seq)
         seq.type = 'global'
 
         # input is the contents of global register
-        seq['SHIFT_IN'][self._global_dropped_bits:gr_size + self._global_dropped_bits] = self._global_reg_reversed()
+        seq['SHIFT_IN'][self._global_dropped_bits:gr_size +
+                        self._global_dropped_bits] =\
+            self._global_reg_reversed()
         # Enable the clock
-        seq['GLOBAL_SHIFT_EN'][0:gr_size + self._global_dropped_bits] = bitarray( gr_size * '1')
+        seq['GLOBAL_SHIFT_EN'][0:gr_size + self._global_dropped_bits] =\
+            bitarray(gr_size * '1')
         # load signals into the shadow register
-        seq['GLOBAL_CTR_LD'][gr_size + 1 + self._global_dropped_bits:gr_size + 2 + self._global_dropped_bits] = bitarray("1")
+        seq['GLOBAL_CTR_LD'][gr_size + 1 +
+                             self._global_dropped_bits:gr_size + 2 +
+                             self._global_dropped_bits] = bitarray("1")
         if load_DAC:
-            seq['GLOBAL_DAC_LD'][gr_size + 1 + self._global_dropped_bits:gr_size + 2 + self._global_dropped_bits] = bitarray("1")
+            seq['GLOBAL_DAC_LD'][gr_size + 1 +
+                                 self._global_dropped_bits:gr_size + 2 +
+                                 self._global_dropped_bits] = bitarray("1")
 
         # Make all patterns the same length
         # Find the max of all lengths of all patterns
@@ -171,7 +188,7 @@ class Pixel(Dut):
             self._blocks.insert(position, seq)
         else:
             self._blocks.append(seq)
-    
+
     def write_pixel_reg(self, position=None):
         """
         Add the pixel register to the command to send to the chip.
@@ -179,7 +196,7 @@ class Pixel(Dut):
         Includes enabling the clock.
 
         """
-        px_size = len(self['PIXEL_REG'][:]) #get the size
+        px_size = len(self['PIXEL_REG'][:])  # get the size
         seq = {
             'SHIFT_IN': bitarray('0' * px_size),
             'PIXEL_SHIFT_EN': bitarray('0' * px_size),
@@ -187,15 +204,17 @@ class Pixel(Dut):
         seq = Block(seq)
         seq.type = 'pixel'
 
-        seq['SHIFT_IN'][0:px_size] = self['PIXEL_REG'][:] # this will be shifted out
-        seq['PIXEL_SHIFT_EN'][0:px_size] = bitarray( px_size * '1') #this is to enable clock (12MHz)
+        # this will be shifted out
+        seq['SHIFT_IN'][0:px_size] = self['PIXEL_REG'][:]
+        # this is to enable clock (12MHz)
+        seq['PIXEL_SHIFT_EN'][0:px_size] = bitarray(px_size * '1')
 
         # add the block to the list of blocks to write
         if position:
             self._blocks.insert(position, seq)
         else:
             self._blocks.append(seq)
-            
+
     def write_injection(self, delay_until_rise):
         """
         Add an injection pattern (low then high) to the signal.
@@ -204,10 +223,13 @@ class Pixel(Dut):
         Should be less than the expected time till the next injection.
         """
         if delay_until_rise > self._block_lengths['inject']:
-            raise ValueError("delay must be <= " + str(self._block_lengths['inject']))
+            raise ValueError("delay must be <= " +
+                             str(self._block_lengths['inject']))
 
         filler = self._block_lengths['inject'] - delay_until_rise
-        injection_sequence = Block({"INJECTION": bitarray('0'*delay_until_rise + '1' * filler)})
+        injection_sequence = Block({
+            "INJECTION": bitarray('0'*delay_until_rise + '1' * filler)
+            })
         injection_sequence.type = 'inject'
         self._blocks.append(injection_sequence)
 
@@ -215,28 +237,27 @@ class Pixel(Dut):
         """
         Send all commands to the chip.
 
-        if(enable_receiver) (true by default), stores the output (by
-        byte) in self['DATA'], retrievable via
+        if(enable_receiver) (true by default), stores the
+        output (by byte) in self['DATA'], retrievable via
         `chip['DATA'].get_data()`.
 
         if num_executions > 0, run that many times (hardware loop).
         if num_executions == 0, loop indefinitely.
 
         """
-        #enable receiver it work only if pixel register is enabled/clocked
-        self['PIXEL_RX'].set_en(enable_receiver) 
-        
+        # enable receiver it work only if pixel register is enabled/clocked
+        self['PIXEL_RX'].set_en(enable_receiver)
+
         # Transcribe the blocks to self['SEQ']
         num_bits = self._write_blocks_to_seq()
 
         # Write the sequence to the sequence generator (hw driver)
-        self['SEQ'].write(num_bits) #write pattern to memory
+        self['SEQ'].write(num_bits)  # write pattern to memory
 
-        
         self['SEQ'].set_size(num_bits)  # set size
-        self['SEQ'].set_repeat(num_executions) # set repeat
-        self['SEQ'].start() # start
-        
+        self['SEQ'].set_repeat(num_executions)  # set repeat
+        self['SEQ'].start()  # start
+
         while not self['SEQ'].get_done():
             time.sleep(0.01)
             print "Wait for done..."
@@ -288,13 +309,13 @@ class Pixel(Dut):
 
         return num_bits
 
-    def reset_seq(self, seq_fields=None):
+    def reset_seq(self, fields=None):
         """
         Erase all data which was previously set up to go to the chip.
 
-        This is sufficient to make the Pixel object's outputs behave
-        as if the object is new. It does not affect the object's inputs,
-        in particular the input from the shift register's output.
+        This is sufficient to make the Pixel object's outputs behave as
+        if the object is new. It does not affect the object's inputs, in
+        particular the input from the shift register's output.
 
         Options for fields are the fields of the SEQ register specified
         in the YAML configuration file. For example, they could be:
@@ -311,10 +332,10 @@ class Pixel(Dut):
         If no fields are given, resets all fields (entire register).
 
         """
-        if not seq_fields:
-            seq_fields = [track['name'] for track in self['SEQ']._conf['tracks']]
+        if not fields:
+            fields = [track['name'] for track in self['SEQ']._conf['tracks']]
 
-        for field in seq_fields:
+        for field in fields:
             self['SEQ'][field].setall(False)
 
         self._blocks = []
@@ -327,21 +348,21 @@ class Pixel(Dut):
 
         The parameters can be integers or bitarrays. Integers will be
         converted to bitarrays of the appropriate length. They are
-        represented as Big-Endian, meaning the leftmost bit gets
-        sent first. This matches the convention used by the T3MAPS
-        chip, so there is no conversion necessary. Bitarrays should
-        already be the appropriate length, so please do not try to
-        assign an 8-bit field to bitarray("1"). Instead, use
-        bitarray("00000001"). The order of the bits is also Big-Endian,
-        so the leftmost bit is sent first.
+        represented as Big-Endian, meaning the leftmost bit gets sent
+        first. This matches the convention used by the T3MAPS chip, so
+        there is no conversion necessary. Bitarrays should already be
+        the appropriate length, so please do not try to assign an 8-bit
+        field to bitarray("1"). Instead, use bitarray("00000001"). The
+        order of the bits is also Big-Endian, so the leftmost bit is
+        sent first.
 
-        `empty_pattern` specifies a set of bits to use as padding
-        for sections of the global register which are not used by
-        the chip. This behavior is currently hardcoded in, although
-        it would be a good improvement to make this behavior adjustable.
+        `empty_pattern` specifies a set of bits to use as padding for
+        sections of the global register which are not used by the chip.
+        This behavior is currently hardcoded in, although it would be a
+        good improvement to make this behavior adjustable.
 
         """
-        self['GLOBAL_REG'][:]=0
+        self['GLOBAL_REG'][:] = 0
         for key, value in kwargs.iteritems():
             if isinstance(value, bitarray):
                 value.reverse()
@@ -350,20 +371,20 @@ class Pixel(Dut):
         # assign non-zero value to the unused regions,
         # for debugging purposes
         empties = {
-            'EMPTY_0':32,
-            'EMPTY_1':48,
-            'EMPTY_2':16
+            'EMPTY_0': 32,
+            'EMPTY_1': 48,
+            'EMPTY_2': 16
         }
         for key, value in empties.iteritems():
-            self['GLOBAL_REG'][key] = bitarray((empty_pattern * (value/8))[::-1])
+            new_pattern = bitarray((empty_pattern * (value/8))[::-1])
+            self['GLOBAL_REG'][key] = new_pattern
 
     def set_pixel_register(self, value):
         """
         Set the value of the pixel register.
 
-        `value` must be a bitarray, string of bits, or iterable
-        of booleans. The length must match the length of the
-        register.
+        `value` must be a bitarray, string of bits, or iterable of
+        booleans. The length must match the length of the register.
 
         The bits are sent leftmost-first to the chip.
 
@@ -376,8 +397,8 @@ class Pixel(Dut):
 
         Returned as a list of (possibly inverted) bits.
 
-        Make sure to save the return value, since this
-        method only works once.
+        Make sure to save the return value, since this method only works
+        once.
 
         """
         # 1. Data emerges from hardware in the following form:
@@ -387,7 +408,7 @@ class Pixel(Dut):
         # 4. Then, weave the lists together.
         # 5. To get the bits themselves, unpack the uint8's to a list of bits.
 
-        #1. get data from sram fifo
+        # 1. get data from sram fifo
         rxd = self['DATA'].get_data()
         # 2. Take from rxd only the last 8 bits of each element.
         #    Do this by casting the elements of the list to uint8.
@@ -427,7 +448,7 @@ class Pixel(Dut):
         Get the global register, with the bits in each field reversed.
 
         This is necessary for input to the chip.
-        
+
         """
         global_register = self['GLOBAL_REG']
 
@@ -447,12 +468,11 @@ if __name__ == "__main__":
     # create a chip object
     chip = Pixel("lt3maps.yaml")
 
-    #settings for global register (to input into global SR)
+    # settings for global register (to input into global SR)
     chip.set_global_register(column_address=8)
     chip.write_global_reg(load_DAC=True)
 
-
-    #settings for pixel register (to input into pixel SR)
+    # settings for pixel register (to input into pixel SR)
     chip.set_pixel_register('10'*8+'1000'*8+'10000000'*2)
     chip.write_pixel_reg()
 
