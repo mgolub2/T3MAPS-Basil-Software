@@ -1,60 +1,70 @@
-#
-# ------------------------------------------------------------
-# Copyright (c) All rights reserved
-# SiLab, Institute of Physics, University of Bonn
-# ------------------------------------------------------------
-#
-# SVN revision information:
-#  $Rev::                       $:
-#  $Author::                    $:
-#  $Date::                      $:
-#
 ---
 name    : ExamplePixelDut 
 version : 0.01
 
+# The transfer layer is the primary interface to the hardware.
+# It should almost always be of type SiUsb, and must always be
+# the name of a module which can be imported.
+# The bit file is the firmware to load onto the FPGA.
+# The board id is determined automatically. To resolve
+# any ambiguities (if you are connecting >1 board), you can
+# set it manually.
 transfer_layer:
   - name  : usb
     type  : SiUsb # or SimSiUsb to run as simulation
     board_id  : -1
     bit_file : "/home/pixel/basil/trunk/examples/pixel/device/ise/pixel.bit"
     
+# The hardware drivers communicate directly with the hardware.
 hw_drivers:    
+  # DATA receives data from inputs.
   - name      : DATA
     type      : sram_fifo
     interface : usb
     base_addr : 0x10020 
     base_data_addr: 0x0001000000000000
 
+  # SEQ_GEN prepares the output sequence.
   - name      : SEQ_GEN
     type      : seq_gen
     interface : usb
     mem_size  : 8192
     base_addr : 0x11000
 
+  # I don't know what TDC does.
   - name      : TDC
     type      : tdc_s3
     interface : usb
     base_addr : 0x10200
 
+  # I don't know what PIXEL_RX does.
   - name      : PIXEL_RX
     type      : fast_spi_rx
     interface : usb
     base_addr : 0x10100
   
+  # I don't know what gpio does.
   - name      : gpio
     type      : gpio
     interface : usb
     base_addr : 0x10000
     size      : 8
 
+  # PWRAC controls the voltage on the power pins labeled
+  # VD1 and VD2 on the FE-I4 Adapter card.
   - name      : PWRAC
     type      : FEI4AdapterCard
     interface : usb
     base_addr : 0x00000
 
+# Registers are the primary data structure used to organize input data.
+# They are set up according to the following principle:
+# Each field occupies locations from `offset` - `size` to `offset`.
+# Hence the first field will start at location 0 and go to location
+# `offset`, which should equal `size`-1, since indexing starts at 0.
 registers:
 
+  # GLOBAL_REG is the global configuration register.
   - name        : GLOBAL_REG
     type        : StdRegister
     driver      : None
