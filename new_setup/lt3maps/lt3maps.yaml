@@ -97,10 +97,19 @@ registers:
           - name     : config_mode
             size     : 2
             offset   : 167
-          - name     : LD_IN0_7
-            size     : 8
+          - name     : hitor_strobe
+            size     : 1
             offset   : 165
-          - name     : LDENABLE_SEL
+          - name     : hit_strobe
+            size     : 1
+            offset   : 164
+          - name     : inject_strobe
+            size     : 1
+            offset   : 163
+          - name     : TDAC_strobes
+            size     : 5
+            offset   : 162
+          - name     : enable_strobes
             size     : 1
             offset   : 157
           - name     : SRCLR_SEL
