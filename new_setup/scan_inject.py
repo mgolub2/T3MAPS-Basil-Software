@@ -61,6 +61,7 @@ def set_bit_latches(chip, column_address, rows, enable, *args):
     chip.set_global_register(
         column_address=column_address,
         enable_strobes=1,
+        #TDAC_strobes=31,
         **strobes
         )
     chip.write_global_reg()
@@ -110,8 +111,13 @@ if __name__ == "__main__":
         )
     chip.write_global_reg(load_DAC=True)
 
+    # initialize all latches to 0
+    latches_to_strobe = ['hitor_strobe', 'hit_strobe', 'inject_strobe']
+    set_bit_latches(chip, args.column_number, 63, False, *latches_to_strobe)
+
+    # set latches to desired values
     latches_to_strobe = [key for key, value in strobes.iteritems() if value ]
-    set_bit_latches(chip, column_number, 63, args.enable, *latches_to_strobe)
+    set_bit_latches(chip, args.column_number, 63, args.enable, *latches_to_strobe)
 
     # run
     chip.run_seq()
