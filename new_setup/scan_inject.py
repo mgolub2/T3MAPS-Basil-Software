@@ -115,9 +115,47 @@ if __name__ == "__main__":
     latches_to_strobe = ['hitor_strobe', 'hit_strobe', 'inject_strobe']
     set_bit_latches(chip, args.column_number, 63, False, *latches_to_strobe)
 
-    # set latches to desired values
-    latches_to_strobe = [key for key, value in strobes.iteritems() if value ]
-    set_bit_latches(chip, args.column_number, 63, args.enable, *latches_to_strobe)
+    # Enable strobes the right way
+    latches_to_strobe = [key for key, value in strobes.iteritems() if value]
+    set_bit_latches(chip, args.column_number, 63, args.enable,
+                    *latches_to_strobe)
+
+    # Remove the bits from setting the strobes
+    chip.set_pixel_register("0" * 64)
+    chip.write_pixel_reg()
+
+    # Configure S0, and HitLD
+    chip.set_global_register(
+        column_address=args.column_number,
+        S0=1,
+        S1=0,
+        HITLD_IN=1
+        )
+    chip.write_global_reg()
 
     # run
     chip.run_seq()
+
+    # capture the output from earlier shift registers
+    extra_output = chip.get_sr_output(invert=True)
+    print "first_output:"
+    print extra_output
+
+    # wait a little while for injection
+    time.sleep(0.5)
+
+    # reset the sequence to start again
+    chip.reset_seq()
+
+    # reset the S0 and HitLD to 0
+    chip.set_global_register(column_address=args.column_number)
+    chip.write_global_reg()
+
+    # read out the pixel register
+    chip.set_pixel_register("0" * 64)
+    chip.write_pixel_reg()
+
+    chip.run_seq()
+    output = chip.get_sr_output(invert=True)
+    print "output:"
+    print output
