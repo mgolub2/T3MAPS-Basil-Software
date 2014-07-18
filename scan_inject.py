@@ -112,7 +112,7 @@ if __name__ == "__main__":
 
     # initialize all latches to 0
     latches_to_strobe = ['hitor_strobe', 'hit_strobe', 'inject_strobe']
-    set_bit_latches(chip, args.column_number, 63, False, *latches_to_strobe)
+    set_bit_latches(chip, args.column_number, range(64), False, *latches_to_strobe)
 
     # Enable the desired strobes
     latches_to_strobe = [key for key, value in strobes.iteritems() if value]
