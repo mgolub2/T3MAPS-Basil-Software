@@ -120,7 +120,7 @@ if __name__ == "__main__":
                     *latches_to_strobe)
 
     # Remove the bits from setting the strobes
-    chip.set_pixel_register("01" * 32)
+    chip.set_pixel_register("0" * 64)
     chip.write_pixel_reg()
 
     # Configure S0, and HitLD
