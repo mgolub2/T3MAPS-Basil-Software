@@ -61,7 +61,6 @@ def set_bit_latches(chip, column_address, rows, enable, *args):
     chip.set_global_register(
         column_address=column_address,
         enable_strobes=1,
-        #TDAC_strobes=31,
         **strobes
         )
     chip.write_global_reg()
@@ -116,7 +115,7 @@ if __name__ == "__main__":
 
     # Enable the desired strobes
     latches_to_strobe = [key for key, value in strobes.iteritems() if value]
-    set_bit_latches(chip, args.column_number, 63, True,
+    set_bit_latches(chip, args.column_number, [1, 62,63], True,
                     *latches_to_strobe)
 
     # Remove the bits from setting the strobes
@@ -128,7 +127,16 @@ if __name__ == "__main__":
         column_address=args.column_number,
         S0=args.s0,
         S1=args.s1,
-        HITLD_IN=args.hitld
+        HITLD_IN=args.hitld,
+        SRCLR_SEL=1
+        )
+    chip.write_global_reg()
+
+    chip.set_global_register(
+        column_address=args.column_number,
+        S0=args.s0,
+        S1=args.s1,
+        HITLD_IN=args.hitld,
         )
     chip.write_global_reg()
 
@@ -137,7 +145,7 @@ if __name__ == "__main__":
 
     # capture the output from earlier shift registers
     extra_output = chip.get_sr_output(invert=True)
-    print "first_output:"
+    print "early output:"
     print extra_output
 
     # wait a little while for injection
@@ -156,5 +164,5 @@ if __name__ == "__main__":
 
     chip.run_seq()
     output = chip.get_sr_output(invert=True)
-    print "output:"
+    print "true output:"
     print output
