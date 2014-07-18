@@ -1,8 +1,0 @@
-all commands must end in ; or \n
-commands are case-insensitive. for consistency, let's do lowercase for all commands.
-commands can be abbreviated. don't do that though
-commands containing strings must have them surrounded by " (so must escape them using \")
-maximum length of block name is 8 chars
-minimum length of block is 64
-need to time.sleep after data:pattern:bit by num_bits/4 * 0.002s, apparently
-data:pattern:word takes "bytes", e.g.  "#210\x00\x00\x00\x00E....."
