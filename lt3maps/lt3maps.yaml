@@ -1,5 +1,5 @@
 ---
-name    : ExamplePixelDut 
+name    : ExamplePixelDut
 version : 0.01
 
 # The transfer layer is the primary interface to the hardware.
@@ -14,14 +14,14 @@ transfer_layer:
     type  : SiUsb # or SimSiUsb to run as simulation
     board_id  : -1
     bit_file : "/home/pixel/basil/trunk/examples/pixel/device/ise/pixel.bit"
-    
+
 # The hardware drivers communicate directly with the hardware.
-hw_drivers:    
+hw_drivers:
   # DATA receives data from inputs.
   - name      : DATA
     type      : sram_fifo
     interface : usb
-    base_addr : 0x10020 
+    base_addr : 0x10020
     base_data_addr: 0x0001000000000000
 
   # SEQ_GEN prepares the output sequence.
@@ -42,7 +42,7 @@ hw_drivers:
     type      : fast_spi_rx
     interface : usb
     base_addr : 0x10100
-  
+
   # I don't know what gpio does.
   - name      : gpio
     type      : gpio
@@ -69,15 +69,15 @@ registers:
     type        : StdRegister
     driver      : None
     size        : 176
-    fields  : 
-          - name     : global_readout_enable 
-            size     : 1         
+    fields  :
+          - name     : global_readout_enable
+            size     : 1
             offset   : 175
-          - name     : SRDO_load 
-            size     : 1         
+          - name     : SRDO_load
+            size     : 1
             offset   : 174
-          - name     : NCout2 
-            size     : 1         
+          - name     : NCout2
+            size     : 1
             offset   : 173
           - name     : count_hits_not
             size     : 1
@@ -117,7 +117,7 @@ registers:
             offset   : 156
           - name     : HITLD_IN
             size     : 1
-            offset   : 154
+            offset   : 155
           - name     : NCout21_25
             size     : 5
             offset   : 154
@@ -162,11 +162,11 @@ registers:
     hw_driver   : SEQ_GEN
     seq_width   : 8
     seq_size    : 8192
-    tracks  : 
+    tracks  :
       - name     : SHIFT_IN
         position : 0
       - name     : GLOBAL_SHIFT_EN
-        position : 1  
+        position : 1
       - name     : GLOBAL_CTR_LD
         position : 2
       - name     : GLOBAL_DAC_LD
