@@ -80,17 +80,16 @@ if __name__ == "__main__":
     # parse command line input
     parser = argparse.ArgumentParser()
     parser.add_argument("column_number", type=int)
-    enable_grp = parser.add_mutually_exclusive_group()
-    enable_grp.add_argument("--enable", action="store_true",
-                            help="strobes to 1")
-    # this argument is ignored. it's just a good placeholder for "not --enable"
-    enable_grp.add_argument("--disable", action="store_true",
-                            help="strobes to 0")
-    parser.add_argument("--hit", action="store_true", help="transparent hit")
+    parser.add_argument("s0", type=int)
+    parser.add_argument("s1", type=int)
+    parser.add_argument("hitld", type=int)
+
+    parser.add_argument("--hit", action="store_true",
+                        help="enable hit")
     parser.add_argument("--inject", action="store_true",
-                        help="transparent inject")
+                        help="enable inject")
     parser.add_argument("--hitor", action="store_true",
-                        help="transparent hitor")
+                        help="enable hitor")
     args = parser.parse_args()
     strobes = {
         "hit_strobe": int(args.hit),
@@ -115,21 +114,21 @@ if __name__ == "__main__":
     latches_to_strobe = ['hitor_strobe', 'hit_strobe', 'inject_strobe']
     set_bit_latches(chip, args.column_number, 63, False, *latches_to_strobe)
 
-    # Enable strobes the right way
+    # Enable the desired strobes
     latches_to_strobe = [key for key, value in strobes.iteritems() if value]
-    set_bit_latches(chip, args.column_number, 63, args.enable,
+    set_bit_latches(chip, args.column_number, 63, True,
                     *latches_to_strobe)
 
     # Remove the bits from setting the strobes
-    chip.set_pixel_register("0" * 64)
+    chip.set_pixel_register("01" * 32)
     chip.write_pixel_reg()
 
     # Configure S0, and HitLD
     chip.set_global_register(
         column_address=args.column_number,
-        S0=1,
-        S1=0,
-        HITLD_IN=1
+        S0=args.s0,
+        S1=args.s1,
+        HITLD_IN=args.hitld
         )
     chip.write_global_reg()
 

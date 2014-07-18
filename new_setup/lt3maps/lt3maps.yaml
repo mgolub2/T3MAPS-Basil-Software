@@ -117,7 +117,7 @@ registers:
             offset   : 156
           - name     : HITLD_IN
             size     : 1
-            offset   : 155
+            offset   : 154
           - name     : NCout21_25
             size     : 5
             offset   : 154
