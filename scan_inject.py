@@ -72,6 +72,19 @@ def set_bit_latches(chip, column_address, rows, enable, *args):
     chip.write_global_reg()
     return
 
+def run_chip(chip):
+    # run
+    chip.run_seq()
+
+    # capture the output from earlier shift registers
+    extra_output = chip.get_sr_output(invert=True)
+
+    # wait a little while for noise to die down
+    time.sleep(0.5)
+
+    # reset the sequence to start again
+    chip.reset_seq()
+
 if __name__ == "__main__":
     from lt3maps.lt3maps import *
     import argparse
@@ -109,18 +122,24 @@ if __name__ == "__main__":
         )
     chip.write_global_reg(load_DAC=True)
 
+    print "writing global DAC values"
+    run_chip(chip)
+
     # initialize all latches to 0
     latches_to_strobe = ['hitor_strobe', 'hit_strobe', 'inject_strobe']
     set_bit_latches(chip, args.column_number, range(64), False, *latches_to_strobe)
 
-    # Enable the desired strobes
+    # Enable the desired strobes: every other bit, for a recognizable pattern
     latches_to_strobe = [key for key, value in strobes.iteritems() if value]
-    set_bit_latches(chip, args.column_number, [1, 62,63], True,
+    set_bit_latches(chip, args.column_number, range(0,64,2), True,
                     *latches_to_strobe)
 
     # Remove the bits from setting the strobes
     chip.set_pixel_register("0" * 64)
     chip.write_pixel_reg()
+
+    print "enabling strobes"
+    run_chip(chip)
 
     # Configure S0, and HitLD
     chip.set_global_register(
@@ -132,6 +151,9 @@ if __name__ == "__main__":
         )
     chip.write_global_reg()
 
+    print "writing first ctrl register (including srclr_sel=1)"
+    run_chip(chip)
+
     chip.set_global_register(
         column_address=args.column_number,
         S0=args.s0,
@@ -140,13 +162,10 @@ if __name__ == "__main__":
         )
     chip.write_global_reg()
 
+    print "writing second ctrl register"
+
     # run
     chip.run_seq()
-
-    # capture the output from earlier shift registers
-    extra_output = chip.get_sr_output(invert=True)
-    print "early output:"
-    print extra_output
 
     # wait a little while for injection
     time.sleep(0.5)
