@@ -53,8 +53,8 @@ class Pixel(Dut):
     >>> chip.write_configuration_reg()
     >>> chip.set_pixel_register("10"*32)
     >>> chip.write_pixel_reg()
-    >>> chip.run_seq()
-    >>> output = chip.get_sr_output()
+    >>> chip._run_seq()
+    >>> output = chip._get_sr_output()
     >>> print "output:", output
 
     """
@@ -233,7 +233,29 @@ class Pixel(Dut):
         injection_sequence.type = 'inject'
         self._blocks.append(injection_sequence)
 
-    def run_seq(self, num_executions=1, enable_receiver=True):
+    def run(self, get_output=True):
+        """
+        Send current commands to the chip and return the output.
+
+        The current blocks are erased in the process. The output is presented
+        in the order it is received, i.e. first bit out is output[0]. This
+        first bit corresponds to the last bit in the shift register, since the
+        last bit is out first.
+
+        """
+        # run
+        self._run_seq()
+
+        output = None
+        if get_output:
+            # capture the output from earlier shift registers
+            output = self._get_sr_output(invert=True)
+
+        # reset the sequence to start again
+        self.reset_seq()
+        return output
+
+    def _run_seq(self, num_executions=1, enable_receiver=True):
         """
         Send all commands to the chip.
 
@@ -391,7 +413,7 @@ class Pixel(Dut):
         """
         self['PIXEL_REG'][:] = bitarray(value)
 
-    def get_sr_output(self, invert=True):
+    def _get_sr_output(self, invert=True):
         """
         Retrieve the output from the chip.
 
@@ -426,11 +448,11 @@ class Pixel(Dut):
             bdata = np.invert(bdata, dtype=np.bool).astype(np.uint8)
         return bdata
 
-    def get_output_size(self):
+    def _get_output_size(self):
         """
         Returns the number of bits received as output.
 
-        This should be called before calling `get_sr_output`.
+        This cannot be called after `_get_sr_output`.
 
         """
         byte_size = 8
@@ -481,10 +503,8 @@ if __name__ == "__main__":
     chip.set_pixel_register('1100'*16)
 
     chip.write_pixel_reg()
-    # send the commands to the chip
-    chip.run_seq()
 
-    # Get output back
-    print "chip output size:", chip.get_output_size()
+    # send the commands to the chip and get output back
+    output = chip.run()
     print "chip output:"
-    print chip.get_sr_output(invert=True)
+    print output

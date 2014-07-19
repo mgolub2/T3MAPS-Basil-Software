@@ -72,17 +72,6 @@ def set_bit_latches(chip, column_address, rows, enable, *args):
     chip.write_global_reg()
     return
 
-def run_chip(chip):
-    # run
-    chip.run_seq()
-
-    # capture the output from earlier shift registers
-    output = chip.get_sr_output(invert=True)
-
-    # reset the sequence to start again
-    chip.reset_seq()
-    return output
-
 if __name__ == "__main__":
     from lt3maps.lt3maps import *
     import argparse
@@ -120,7 +109,7 @@ if __name__ == "__main__":
         )
     chip.write_global_reg(load_DAC=True)
 
-    run_chip(chip)
+    chip.run(get_output=False)
 
     # initialize all latches to 0
     latches_to_strobe = ['hitor_strobe', 'hit_strobe', 'inject_strobe']
@@ -135,7 +124,7 @@ if __name__ == "__main__":
     chip.set_pixel_register("0" * 64)
     chip.write_pixel_reg()
 
-    run_chip(chip)
+    chip.run()
 
     # Configure S0, and HitLD
     chip.set_global_register(
@@ -147,7 +136,7 @@ if __name__ == "__main__":
         )
     chip.write_global_reg()
 
-    run_chip(chip)
+    chip.run(get_output=False)
 
     chip.set_global_register(
         column_address=args.column_number,
@@ -158,13 +147,10 @@ if __name__ == "__main__":
     chip.write_global_reg()
 
     # run
-    chip.run_seq()
+    chip.run(get_output=False)
 
     # wait a little while for injection
     time.sleep(0.5)
-
-    # reset the sequence to start again
-    chip.reset_seq()
 
     # reset the S0 and HitLD to 0
     chip.set_global_register(column_address=args.column_number)
@@ -174,7 +160,7 @@ if __name__ == "__main__":
     chip.set_pixel_register("0" * 64)
     chip.write_pixel_reg()
 
-    chip.run_seq()
-    output = chip.get_sr_output(invert=True)
-    print "true output:"
+    # get the (hit) output
+    output = chip.run()
+    print "hit output:"
     print output

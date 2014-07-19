@@ -25,9 +25,7 @@ class TestColumns(unittest.TestCase):
 
             chip.write_pixel_reg()
 
-        chip.run_seq()
-
-        output = chip.get_sr_output(invert=True)
+        output = chip.run()
 
         for i in range(16):
             print "column", i
