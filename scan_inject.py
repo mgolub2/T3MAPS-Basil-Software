@@ -77,13 +77,11 @@ def run_chip(chip):
     chip.run_seq()
 
     # capture the output from earlier shift registers
-    extra_output = chip.get_sr_output(invert=True)
-
-    # wait a little while for noise to die down
-    time.sleep(0.5)
+    output = chip.get_sr_output(invert=True)
 
     # reset the sequence to start again
     chip.reset_seq()
+    return output
 
 if __name__ == "__main__":
     from lt3maps.lt3maps import *
@@ -122,7 +120,6 @@ if __name__ == "__main__":
         )
     chip.write_global_reg(load_DAC=True)
 
-    print "writing global DAC values"
     run_chip(chip)
 
     # initialize all latches to 0
@@ -138,7 +135,6 @@ if __name__ == "__main__":
     chip.set_pixel_register("0" * 64)
     chip.write_pixel_reg()
 
-    print "enabling strobes"
     run_chip(chip)
 
     # Configure S0, and HitLD
@@ -151,7 +147,6 @@ if __name__ == "__main__":
         )
     chip.write_global_reg()
 
-    print "writing first ctrl register (including srclr_sel=1)"
     run_chip(chip)
 
     chip.set_global_register(
@@ -161,8 +156,6 @@ if __name__ == "__main__":
         HITLD_IN=args.hitld,
         )
     chip.write_global_reg()
-
-    print "writing second ctrl register"
 
     # run
     chip.run_seq()
