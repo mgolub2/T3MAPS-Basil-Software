@@ -62,13 +62,12 @@ class Scanner(object):
         """
         Reset the S0 and HitLd configuration to "active" mode.
 
-        Side effect: runs the chip.
-
         """
         chip = self.chip
         # Reset configuration: Configure S0, and HitLD
         chip.set_global_register(
             column_address=column_number,
+            config_mode=0,
             S0=1,
             S1=0,
             HITLD_IN=1,
@@ -137,7 +136,7 @@ class Scanner(object):
         Perform a source scan and record all hits.
 
         """
-        NUM_COLUMNS = 2
+        NUM_COLUMNS = 18
         # set up the global dac register
         self.chip.set_global_register(
             PrmpVbp=142,
@@ -155,16 +154,18 @@ class Scanner(object):
             self._set_latches_for_scan(i)
 
         #self._reset_hit_configuration(0)
-        self._reset_hit_configuration(1)
-        self.chip.run()
+        #self._reset_hit_configuration(1)
+        #self.chip.run()
 
-        for i in range(2):
+        for i in range(NUM_COLUMNS):
+            self._reset_hit_configuration(i)
+            self.chip.run()
             self._read_column_hits(i)
 
-        output = self.chip.run()
-        print np.nonzero(output)
-        for i in range(2):
-            hits = np.nonzero(output[i*64:(i+1)*64])[0]
+            output = self.chip.run()
+            hits = np.nonzero(output)[0]
+        #for i in range(2):
+            #hits = np.nonzero(output[i*64:(i+1)*64])[0]
             #hits = np.nonzero(output)[0]
             self.hits.append({
                 "column": i,
@@ -177,8 +178,8 @@ if __name__ == "__main__":
     scanner = Scanner("lt3maps/lt3maps.yaml")
 
     scanner.scan()
-    print scanner.hits[0]["time"], scanner.hits[-1]["time"]
+    print scanner.hits[0]["time"] - scanner.hits[-1]["time"]
     print scanner.hits[0]
     print scanner.hits[1]
-    #print scanner.hits[4]
-    #print scanner.hits[16]
+    print scanner.hits[4]
+    print scanner.hits[17]
