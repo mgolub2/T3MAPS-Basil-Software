@@ -1,166 +1,184 @@
 """
-Inject charge onto the chip and see if we can see it.
+Scanner module.
+
+Read hit data off the chip.
 
 Injection is done using an external device, such as a function
 generator.
 
 """
 
+from lt3maps.lt3maps import *
+import numpy as np
+import time
 
-def set_bit_latches(chip, column_address, rows, enable, *args):
+class Scanner(object):
     """
-    Set the given 1-bit latches for the given pixels.
-
-    All other pixels in the row have their corresponding latches
-    disabled.
-
-    `args` should be strings that correspond to the latches to be
-    set. Acceptable values could be 'hit_strobe', 'inject_strobe',
-    and 'hitor_strobe'. They may change, but they correspond to the
-    appropriate name in the YAML file used to configure the chip.
-    `enable` tells whether to set the latch to 0 or 1. It should be a
-    boolean.
-
-    For example,
-
-    >>> set_latches(chip, 0, 63, True, 'hit_strobe', 'inject_strobe')
-
-    will enable the hit and inject latches on the 0th row, 63rd pixel.
-    All indexing starts from 0. (so 63rd pixel is "normal people"-64th)
-
-    For multi-bit latches, e.g. TDAC, use the `set_latches` function,
-    which lets you set arbitrary values to any set of latches.
+    Scan for hits on the LT3MAPS chip.
 
     """
-    # Make sure `rows` is a list (could be just a single number)
-    if isinstance(rows, int):
-        rows = [rows]
 
-    # Construct the pixel register input (all 0's except for indices in "rows")
-    PIXEL_REGISTER_LENGTH = len(chip['PIXEL_REG'])
-    pixel_register_input = ""
-    if enable:
-        pixel_register_input =\
-            [(i in rows) for i in range(PIXEL_REGISTER_LENGTH)]
-        pixel_register_input = [str(int(b)) for b in pixel_register_input]
-        pixel_register_input = "".join(pixel_register_input)[::-1]
-    else:
-        pixel_register_input = "0" * PIXEL_REGISTER_LENGTH
+    def __init__(self, config_file_location):
+        self.chip = Pixel(config_file_location)
+        self.hits = []
 
-    # construct a dict of strobes to pass to set_global_register
-    strobes = {arg: 1 for arg in args}
+    def _set_bit_latches(self, column_number):
+        """
+        Set the hit and inject latches for the given column.
 
-    chip.set_global_register(
-        column_address=column_address)
-    chip.write_global_reg()
+        """
+        chip = self.chip
 
-    chip.set_pixel_register(pixel_register_input)
-    chip.write_pixel_reg()
+        # Construct the pixel register input
+        PIXEL_REGISTER_LENGTH = len(chip['PIXEL_REG'])
+        pixel_register_input = "1" * PIXEL_REGISTER_LENGTH
 
-    # Enable the given strobes
-    chip.set_global_register(
-        column_address=column_address,
-        enable_strobes=1,
-        **strobes
-        )
-    chip.write_global_reg()
+        chip.set_global_register(
+            column_address=column_number)
+        chip.write_global_reg()
 
-    # Disable the given strobes. (New values are saved.)
-    chip.set_global_register(
-        column_address=column_address,
-        )
-    chip.write_global_reg()
-    return
+        chip.set_pixel_register(pixel_register_input)
+        chip.write_pixel_reg()
+
+        # construct a dict of strobes to pass to set_global_register
+        strobes = {'hit_strobe': 1, 'inject_strobe': 1}
+
+        # Enable the strobes
+        chip.set_global_register(
+            column_address=column_number,
+            enable_strobes=1,
+            **strobes
+            )
+        chip.write_global_reg()
+
+        # Disable the strobes. (New values are saved.)
+        chip.set_global_register(
+            column_address=column_number
+            )
+        chip.write_global_reg()
+        return
+
+    def _reset_hit_configuration(self, column_number):
+        """
+        Reset the S0 and HitLd configuration to "active" mode.
+
+        Side effect: runs the chip.
+
+        """
+        chip = self.chip
+        # Reset configuration: Configure S0, and HitLD
+        chip.set_global_register(
+            column_address=column_number,
+            S0=1,
+            S1=0,
+            HITLD_IN=1,
+            SRCLR_SEL=1
+            )
+        chip.write_global_reg()
+
+        chip.set_global_register(
+            column_address=column_number,
+            S0=1,
+            S1=0,
+            HITLD_IN=1,
+            )
+        chip.write_global_reg()
+
+        # run
+        #chip.run(get_output=False)
+        return
+
+    def _read_column_hits(self, column_number):
+        """
+        Read the hits from the pixel shift register.
+
+        """
+        chip = self.chip
+
+        # reset the S0 and HitLD to 0
+        chip.set_global_register(column_address=column_number)
+        chip.write_global_reg()
+
+        # read out the pixel register
+        chip.set_pixel_register("0" * 64)
+        chip.write_pixel_reg()
+
+        # get the (hit) output
+        #output = chip.run()
+        #return output
+
+    def _set_latches_for_scan(self, column_number):
+        """
+        Initialize the latches to prepare for a scan.
+
+        TODO: Currently enables hit and inject. Don't need inject
+        for a true source scan...just for debugging.
+
+        """
+        chip = self.chip
+
+        # initialize all latches to 0
+        latches_to_strobe = ['hitor_strobe', 'hit_strobe', 'inject_strobe']
+        self._set_bit_latches(column_number)
+
+        # Enable the desired strobes: every other bit, for a recognizable pattern
+        latches_to_strobe = ['hit_strobe', 'inject_strobe'] # TODO: change inject
+        self._set_bit_latches(column_number)
+
+        # Remove the bits from setting the strobes
+        chip.set_pixel_register("0" * 64)
+        chip.write_pixel_reg()
+
+        chip.run(get_output=False)
+        return
+
+    def scan(self):
+        """
+        Perform a source scan and record all hits.
+
+        """
+        NUM_COLUMNS = 2
+        # set up the global dac register
+        self.chip.set_global_register(
+            PrmpVbp=142,
+            PrmpVbf=11,
+            vth=150,
+            DisVbn=49,
+            VbpThStep=100,
+            PrmpVbnFol=35,
+            )
+        self.chip.write_global_reg(load_DAC=True)
+
+        self.chip.run(get_output=False)
+
+        for i in range(NUM_COLUMNS):
+            self._set_latches_for_scan(i)
+
+        #self._reset_hit_configuration(0)
+        self._reset_hit_configuration(1)
+        self.chip.run()
+
+        for i in range(2):
+            self._read_column_hits(i)
+
+        output = self.chip.run()
+        print np.nonzero(output)
+        for i in range(2):
+            hits = np.nonzero(output[i*64:(i+1)*64])[0]
+            #hits = np.nonzero(output)[0]
+            self.hits.append({
+                "column": i,
+                "num_hits": len(hits),
+                "hit_rows": hits,
+                "time": time.time()
+            })
 
 if __name__ == "__main__":
-    from lt3maps.lt3maps import *
-    import argparse
+    scanner = Scanner("lt3maps/lt3maps.yaml")
 
-    # parse command line input
-    parser = argparse.ArgumentParser()
-    parser.add_argument("column_number", type=int)
-    parser.add_argument("s0", type=int)
-    parser.add_argument("s1", type=int)
-    parser.add_argument("hitld", type=int)
-
-    parser.add_argument("--hit", action="store_true",
-                        help="enable hit")
-    parser.add_argument("--inject", action="store_true",
-                        help="enable inject")
-    parser.add_argument("--hitor", action="store_true",
-                        help="enable hitor")
-    args = parser.parse_args()
-    strobes = {
-        "hit_strobe": int(args.hit),
-        "inject_strobe": int(args.inject),
-        "hitor_strobe": int(args.hitor)
-    }
-
-    chip = Pixel("lt3maps/lt3maps.yaml")
-
-    # set up the global dac register
-    chip.set_global_register(
-        PrmpVbp=142,
-        PrmpVbf=11,
-        vth=150,
-        DisVbn=49,
-        VbpThStep=100,
-        PrmpVbnFol=35,
-        )
-    chip.write_global_reg(load_DAC=True)
-
-    chip.run(get_output=False)
-
-    # initialize all latches to 0
-    latches_to_strobe = ['hitor_strobe', 'hit_strobe', 'inject_strobe']
-    set_bit_latches(chip, args.column_number, range(64), False, *latches_to_strobe)
-
-    # Enable the desired strobes: every other bit, for a recognizable pattern
-    latches_to_strobe = [key for key, value in strobes.iteritems() if value]
-    set_bit_latches(chip, args.column_number, range(0,64,2), True,
-                    *latches_to_strobe)
-
-    # Remove the bits from setting the strobes
-    chip.set_pixel_register("0" * 64)
-    chip.write_pixel_reg()
-
-    chip.run()
-
-    # Configure S0, and HitLD
-    chip.set_global_register(
-        column_address=args.column_number,
-        S0=args.s0,
-        S1=args.s1,
-        HITLD_IN=args.hitld,
-        SRCLR_SEL=1
-        )
-    chip.write_global_reg()
-
-    chip.run(get_output=False)
-
-    chip.set_global_register(
-        column_address=args.column_number,
-        S0=args.s0,
-        S1=args.s1,
-        HITLD_IN=args.hitld,
-        )
-    chip.write_global_reg()
-
-    # run
-    chip.run(get_output=False)
-
-    # wait a little while for injection
-    time.sleep(0.5)
-
-    # reset the S0 and HitLD to 0
-    chip.set_global_register(column_address=args.column_number)
-    chip.write_global_reg()
-
-    # read out the pixel register
-    chip.set_pixel_register("0" * 64)
-    chip.write_pixel_reg()
-
-    # get the (hit) output
-    output = chip.run()
-    print "hit output:"
-    print output
+    scanner.scan()
+    print scanner.hits[0]["time"], scanner.hits[-1]["time"]
+    print scanner.hits[0]
+    print scanner.hits[1]
+    #print scanner.hits[4]
+    #print scanner.hits[16]
