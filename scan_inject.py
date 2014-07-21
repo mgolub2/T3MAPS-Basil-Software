@@ -11,6 +11,8 @@ generator.
 from lt3maps.lt3maps import *
 import numpy as np
 import time
+import yaml
+import argparse
 
 class Scanner(object):
     """
@@ -21,17 +23,22 @@ class Scanner(object):
     def __init__(self, config_file_location):
         self.chip = Pixel(config_file_location)
         self.hits = []
+        self.outputs = []
 
-    def _set_bit_latches(self, column_number):
+    def _set_bit_latches(self, column_number, enable, *args):
         """
         Set the hit and inject latches for the given column.
+
+        To set TDAC strobes, pass 'TDAC_strobes' as an arg, and make
+        the next argument be the binary value of the bits to strobe,
+        e.g. args = ['TDAC_strobes', 31] strobes all 5 bits.
 
         """
         chip = self.chip
 
         # Construct the pixel register input
         PIXEL_REGISTER_LENGTH = len(chip['PIXEL_REG'])
-        pixel_register_input = "1" * PIXEL_REGISTER_LENGTH
+        pixel_register_input = str(int(enable)) * PIXEL_REGISTER_LENGTH
 
         chip.set_global_register(
             column_address=column_number)
@@ -41,7 +48,10 @@ class Scanner(object):
         chip.write_pixel_reg()
 
         # construct a dict of strobes to pass to set_global_register
-        strobes = {'hit_strobe': 1, 'inject_strobe': 1}
+        strobes = {arg: 1 for arg in args if not isinstance(arg, int)}
+        if 'TDAC_strobes' in args:
+            tdac = [value for value in args if isinstance(value, int)]
+            strobes['TDAC_strobes'] = tdac[0]
 
         # Enable the strobes
         chip.set_global_register(
@@ -67,7 +77,7 @@ class Scanner(object):
         # Reset configuration: Configure S0, and HitLD
         chip.set_global_register(
             column_address=column_number,
-            config_mode=0,
+            config_mode=3,
             S0=1,
             S1=0,
             HITLD_IN=1,
@@ -77,6 +87,7 @@ class Scanner(object):
 
         chip.set_global_register(
             column_address=column_number,
+            config_mode=3,
             S0=1,
             S1=0,
             HITLD_IN=1,
@@ -87,24 +98,24 @@ class Scanner(object):
         #chip.run(get_output=False)
         return
 
-    def _read_column_hits(self, column_number):
+    def _read_column_hits(self, column_number_start, column_number_stop):
         """
         Read the hits from the pixel shift register.
+
+        Adopts the `range` convention of running from [start, stop),
+        excluding stop.
 
         """
         chip = self.chip
 
-        # reset the S0 and HitLD to 0
-        chip.set_global_register(column_address=column_number)
-        chip.write_global_reg()
+        for column_number in range(column_number_start, column_number_stop):
+            # reset the S0 and HitLD to 0
+            chip.set_global_register(column_address=column_number)
+            chip.write_global_reg()
 
-        # read out the pixel register
-        chip.set_pixel_register("0" * 64)
-        chip.write_pixel_reg()
-
-        # get the (hit) output
-        #output = chip.run()
-        #return output
+            # read out the pixel register
+            chip.set_pixel_register("0" * 64)
+            chip.write_pixel_reg()
 
     def _set_latches_for_scan(self, column_number):
         """
@@ -117,12 +128,13 @@ class Scanner(object):
         chip = self.chip
 
         # initialize all latches to 0
-        latches_to_strobe = ['hitor_strobe', 'hit_strobe', 'inject_strobe']
-        self._set_bit_latches(column_number)
+        latches_to_strobe = ['hitor_strobe', 'hit_strobe', 'inject_strobe',
+                             'TDAC_strobes', 31]
+        self._set_bit_latches(column_number, False, *latches_to_strobe)
 
         # Enable the desired strobes: every other bit, for a recognizable pattern
         latches_to_strobe = ['hit_strobe', 'inject_strobe'] # TODO: change inject
-        self._set_bit_latches(column_number)
+        self._set_bit_latches(column_number, True, *latches_to_strobe)
 
         # Remove the bits from setting the strobes
         chip.set_pixel_register("0" * 64)
@@ -131,7 +143,7 @@ class Scanner(object):
         chip.run(get_output=False)
         return
 
-    def scan(self):
+    def scan(self, sleep, cycles):
         """
         Perform a source scan and record all hits.
 
@@ -153,33 +165,40 @@ class Scanner(object):
         for i in range(NUM_COLUMNS):
             self._set_latches_for_scan(i)
 
-        #self._reset_hit_configuration(0)
-        #self._reset_hit_configuration(1)
-        #self.chip.run()
-
-        for i in range(NUM_COLUMNS):
-            self._reset_hit_configuration(i)
+        num_cols_together = 9
+        for _ in range(cycles):
+            self._reset_hit_configuration(0)
             self.chip.run()
-            self._read_column_hits(i)
+            time.sleep(sleep)
+            for i in range(0, NUM_COLUMNS, num_cols_together):
+                self._read_column_hits(i, i + num_cols_together)
+                output = self.chip.run()
+                read_time = time.time()
+                outputs = [(output[i:i+64], read_time) for i in range(0, num_cols_together * 64, 64)]
+                map(self.outputs.append, outputs)
 
-            output = self.chip.run()
+        cycle_num = 0
+        for i, (output, read_time) in enumerate(self.outputs):
+            if i % NUM_COLUMNS == 0:
+                cycle_num = i/NUM_COLUMNS
+                self.hits.append({'cycle': cycle_num, 'data': []})
             hits = np.nonzero(output)[0]
-        #for i in range(2):
-            #hits = np.nonzero(output[i*64:(i+1)*64])[0]
-            #hits = np.nonzero(output)[0]
-            self.hits.append({
-                "column": i,
+            self.hits[cycle_num]['data'].append({
+                "column": i % NUM_COLUMNS,
                 "num_hits": len(hits),
-                "hit_rows": hits,
-                "time": time.time()
+                "hit_rows": hits.tolist(),
+                "time": read_time
             })
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--sleep", type=float, default=0)
+    parser.add_argument("--cycles", type=int, default=1)
+    args = parser.parse_args()
     scanner = Scanner("lt3maps/lt3maps.yaml")
 
-    scanner.scan()
-    print scanner.hits[0]["time"] - scanner.hits[-1]["time"]
-    print scanner.hits[0]
-    print scanner.hits[1]
-    print scanner.hits[4]
-    print scanner.hits[17]
+    scanner.scan(args.sleep, args.cycles)
+    print "time: ", scanner.hits[-1]['data'][-1]["time"] -\
+        scanner.hits[0]['data'][0]["time"]
+    outfile = open("out.yaml", "w")
+    outfile.write(yaml.dump(scanner.hits))
