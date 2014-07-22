@@ -25,7 +25,7 @@ class Scanner(object):
         self.hits = []
         self._outputs = []
 
-    def _set_bit_latches(self, column_number, enable, *args):
+    def _set_bit_latches(self, column_number, rows=None, enable=True, *args):
         """
         Set the hit and inject latches for the given column.
 
@@ -38,7 +38,13 @@ class Scanner(object):
 
         # Construct the pixel register input
         PIXEL_REGISTER_LENGTH = len(chip['PIXEL_REG'])
-        pixel_register_input = str(int(enable)) * PIXEL_REGISTER_LENGTH
+        pixel_register_input = None
+        if not rows:
+            pixel_register_input = str(int(enable)) * PIXEL_REGISTER_LENGTH
+        else:
+            pixel_register_input = ["1" if i in rows else "0" for i in
+                                    range(PIXEL_REGISTER_LENGTH)]
+            pixel_register_input = ''.join(pixel_register_input)
 
         chip.set_global_register(
             column_address=column_number)
@@ -130,11 +136,11 @@ class Scanner(object):
         # initialize all latches to 0
         latches_to_strobe = ['hitor_strobe', 'hit_strobe', 'inject_strobe',
                              'TDAC_strobes', 31]
-        self._set_bit_latches(column_number, False, *latches_to_strobe)
+        self._set_bit_latches(column_number, None, False, *latches_to_strobe)
 
         # Enable the desired strobes: every other bit, for a recognizable pattern
         latches_to_strobe = ['hit_strobe', 'inject_strobe'] # TODO: change inject
-        self._set_bit_latches(column_number, True, *latches_to_strobe)
+        self._set_bit_latches(column_number, None, True, *latches_to_strobe)
 
         # Remove the bits from setting the strobes
         chip.set_pixel_register("0" * 64)
