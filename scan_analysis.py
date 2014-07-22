@@ -54,7 +54,7 @@ def get_scan_results(scanner):
         # make a matrix of pixel hits
         for i in range(len(scanner.hits[0]['data'])):
             col_hits.append(scanner.hits[0]['data'][i]['hit_rows'])
-    except:
+    except NameError:
         for i in range(18):
             # make a matrix of pixel hits
             col_hits.append(next(scanner))
