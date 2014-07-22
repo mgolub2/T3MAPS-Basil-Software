@@ -8,7 +8,7 @@ from lt3maps.lt3maps import *
 class TestColumns(unittest.TestCase):
     def setUp(self):
         # initialize the chip
-        self.chip = Pixel("lt3maps/lt3maps.yaml")
+        self.chip = T3MAPSDriver("lt3maps/lt3maps.yaml")
 
     def test_columns(self):
         chip = self.chip

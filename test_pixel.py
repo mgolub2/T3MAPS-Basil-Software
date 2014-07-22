@@ -2,14 +2,14 @@ import unittest
 from lt3maps.lt3maps import *
 import time
 
-class TestPixel(unittest.TestCase):
+class TestT3MAPSDriver(unittest.TestCase):
     """
-    Test the Pixel class in lt3maps.py.
+    Test the T3MAPSDriver class in lt3maps.py.
 
     """
     def setUp(self):
         # initialize the chip
-        self.chip = Pixel("lt3maps/lt3maps.yaml")
+        self.chip = T3MAPSDriver("lt3maps/lt3maps.yaml")
 
     def tearDown(self):
         del self.chip
@@ -17,7 +17,7 @@ class TestPixel(unittest.TestCase):
     def _setUp_global_register(self):
         self.chip.set_global_register(
             PrmpVbf=253, # will be output as "10111111"
-            LD_IN0_7=bitarray("11111101"), # will be output as "10111111"
+            TDAC_strobes=bitarray("11101"), # will be output as "10111"
             empty_pattern="00000000"
             )
 
@@ -28,7 +28,7 @@ class TestPixel(unittest.TestCase):
         desired_pattern = bitarray("0"*176)
         desired_pattern[16:24] = True
         desired_pattern[17] = False
-        desired_pattern[158:166] = True
+        desired_pattern[158:163] = True
         desired_pattern[159] = False
 
         self.assertEqual(len(desired_pattern), len(chip['GLOBAL_REG'][:]))
@@ -42,8 +42,8 @@ class TestPixel(unittest.TestCase):
         desired_pattern_shift_in = bitarray("0"*178)
         desired_pattern_shift_in[16:24] = True
         desired_pattern_shift_in[22] = False
-        desired_pattern_shift_in[158:166] = True
-        desired_pattern_shift_in[164] = False
+        desired_pattern_shift_in[158:163] = True
+        desired_pattern_shift_in[161] = False
 
         self.assertEqual(len(desired_pattern_shift_in), len(chip._blocks[-1]['SHIFT_IN'][:]))
         self.assertEqual(desired_pattern_shift_in, chip._blocks[-1]['SHIFT_IN'][:])

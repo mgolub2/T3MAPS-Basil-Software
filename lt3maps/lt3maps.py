@@ -6,7 +6,7 @@ Author: Sam Kohn <kohn@berkeley.edu>
 This module enables communication between Python and hardware using the
 BASIL framework developed by SiLab, University of Bonn, Germany.
 
-See the class Pixel description for more information.
+See the class T3MAPSDriver description for more information.
 
 """
 import yaml
@@ -25,9 +25,9 @@ class Block(dict):
     type = None
 
 
-class Pixel(Dut):
+class T3MAPSDriver(Dut):
     """
-    A class for communicating with a pixel chip.
+    A class for communicating with a T3MAPS chip.
 
     This class manages all communications between the programmer and the
     hardware. It knows about configuration registers, injection, pixel
@@ -48,7 +48,7 @@ class Pixel(Dut):
 
     A minimum working example looks like the following:
 
-    >>> chip = Pixel("config.yaml")
+    >>> chip = T3MAPSDriver("config.yaml")
     >>> chip.set_configuration_register(column_address=5)
     >>> chip.write_configuration_reg()
     >>> chip.set_pixel_register("10"*32)
@@ -103,7 +103,7 @@ class Pixel(Dut):
         else:  # conf_dict must be specified
             pass
 
-        # Create the Pixel object
+        # Create the T3MAPSDriver object
         Dut.__init__(self, conf_dict)
 
         try:
@@ -335,7 +335,7 @@ class Pixel(Dut):
         """
         Erase all data which was previously set up to go to the chip.
 
-        This is sufficient to make the Pixel object's outputs behave as
+        This is sufficient to make the T3MAPSDriver object's outputs behave as
         if the object is new. It does not affect the object's inputs, in
         particular the input from the shift register's output.
 
@@ -488,7 +488,7 @@ class Pixel(Dut):
 
 if __name__ == "__main__":
     # create a chip object
-    chip = Pixel("lt3maps.yaml")
+    chip = T3MAPSDriver("lt3maps.yaml")
 
     # settings for global register (to input into global SR)
     chip.set_global_register(column_address=8)

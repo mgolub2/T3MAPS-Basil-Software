@@ -21,7 +21,7 @@ class Scanner(object):
     """
 
     def __init__(self, config_file_location):
-        self.chip = Pixel(config_file_location)
+        self.chip = T3MAPSDriver(config_file_location)
         self.hits = []
         self._outputs = []
 

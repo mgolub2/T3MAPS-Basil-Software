@@ -1,5 +1,5 @@
 ---
-name    : ExamplePixelDut
+name    : T3MAPS
 version : 0.01
 
 # The transfer layer is the primary interface to the hardware.
