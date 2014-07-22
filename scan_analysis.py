@@ -1,4 +1,4 @@
-#import scan_inject as scan
+import scan_inject as scan
 import numpy as np
 import pprint
 import yaml
@@ -46,6 +46,22 @@ def get_offset(height, width):
     y_margin = (height - NUM_ROWS)/2
     return (y_margin, x_margin)
 
+def get_scan_results(scanner):
+    col_hits = []
+    try:
+        scanner.reset()
+        scanner.scan(1, 1)
+        # make a matrix of pixel hits
+        for i in range(len(scanner.hits[0]['data'])):
+            col_hits.append(scanner.hits[0]['data'][i]['hit_rows'])
+    except:
+        for i in range(18):
+            # make a matrix of pixel hits
+            col_hits.append(next(scanner))
+
+    return col_hits
+
+
 def application(stdscr):
     curses.curs_set(0)
     stdscr.nodelay(1)
@@ -54,17 +70,7 @@ def application(stdscr):
     stdscr.addstr(y_offset - 2, x_offset, "q to quit")
     stdscr.refresh()
     while True:
-        col_hits = []
-        try:
-            scanner.hits = []
-            scanner.scan(1, 1)
-            # make a matrix of pixel hits
-            for i in range(len(scanner.hits[0]['data'])):
-                col_hits.append(scanner.hits[0]['data'][i]['hit_rows'])
-        except:
-            for i in range(18):
-                # make a matrix of pixel hits
-                col_hits.append(next(scanner))
+        col_hits = get_scan_results(scanner)
         for i, col_hit in enumerate(col_hits):
             col_diagram = np.zeros(64)
             col_diagram[col_hit] = 1
