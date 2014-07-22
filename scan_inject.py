@@ -143,6 +143,14 @@ class Scanner(object):
         chip.run(get_output=False)
         return
 
+    def reset(self):
+        """
+        Reset the scanner to prepare to take a new scan.
+
+        """
+        self.hits = []
+        self._outputs = []
+
     def scan(self, sleep, cycles):
         """
         Perform a source scan and record all hits.
