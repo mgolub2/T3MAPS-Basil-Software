@@ -486,6 +486,32 @@ class T3MAPSDriver(Dut):
 
         return to_return
 
+class Pixel():
+    def __init__(self, column, row):
+        self.column = column
+        self.row = row
+        self.TDAC = 0
+
+class T3MAPSChip():
+    """
+    Control the T3MAPS chip with common functions.
+
+    """
+
+    def __init__(self, driver=None, config_file=None):
+        if bool(driver) != bool(config_file):
+            raise ValueError("Exactly 1 of the parameters must be given.")
+        if bool(driver)
+            self._driver = driver
+        else:
+            self._driver = T3MAPSDriver(config_file)
+
+        num_columns = 18
+        num_rows = 64
+        self._pixels = [[Pixel(column, row) for column in range(num_columns)]
+                        for row in range(num_rows)]
+
+
 if __name__ == "__main__":
     # create a chip object
     chip = T3MAPSDriver("lt3maps.yaml")
