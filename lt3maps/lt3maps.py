@@ -511,6 +511,55 @@ class T3MAPSChip():
         self._pixels = [[Pixel(column, row) for column in range(num_columns)]
                         for row in range(num_rows)]
 
+    def _set_bit_latches(self, column_number, rows=None, enable=True, *args):
+        """
+        Set the hit and inject latches for the given column.
+
+        To set TDAC strobes, pass 'TDAC_strobes' as an arg, and make
+        the next argument be the binary value of the bits to strobe,
+        e.g. args = ['TDAC_strobes', 31] strobes all 5 bits.
+
+        """
+        chip = self.chip
+
+        # Construct the pixel register input
+        PIXEL_REGISTER_LENGTH = len(chip['PIXEL_REG'])
+        pixel_register_input = None
+        if not rows:
+            pixel_register_input = str(int(enable)) * PIXEL_REGISTER_LENGTH
+        else:
+            pixel_register_input = ["1" if i in rows else "0" for i in
+                                    range(PIXEL_REGISTER_LENGTH)]
+            pixel_register_input = ''.join(pixel_register_input)
+
+        chip.set_global_register(
+            column_address=column_number)
+        chip.write_global_reg()
+
+        chip.set_pixel_register(pixel_register_input)
+        chip.write_pixel_reg()
+
+        # construct a dict of strobes to pass to set_global_register
+        strobes = {arg: 1 for arg in args if not isinstance(arg, int)}
+        if 'TDAC_strobes' in args:
+            tdac = [value for value in args if isinstance(value, int)]
+            strobes['TDAC_strobes'] = tdac[0]
+
+        # Enable the strobes
+        chip.set_global_register(
+            column_address=column_number,
+            enable_strobes=1,
+            **strobes
+            )
+        chip.write_global_reg()
+
+        # Disable the strobes. (New values are saved.)
+        chip.set_global_register(
+            column_address=column_number
+            )
+        chip.write_global_reg()
+        return
+
 
 if __name__ == "__main__":
     # create a chip object
