@@ -23,7 +23,7 @@ class Scanner(object):
     def __init__(self, config_file_location):
         self.chip = Pixel(config_file_location)
         self.hits = []
-        self.outputs = []
+        self._outputs = []
 
     def _set_bit_latches(self, column_number, enable, *args):
         """
@@ -175,10 +175,10 @@ class Scanner(object):
                 output = self.chip.run()
                 read_time = time.time()
                 outputs = [(output[i:i+64], read_time) for i in range(0, num_cols_together * 64, 64)]
-                map(self.outputs.append, outputs)
+                map(self._outputs.append, outputs)
 
         cycle_num = 0
-        for i, (output, read_time) in enumerate(self.outputs):
+        for i, (output, read_time) in enumerate(self._outputs):
             if i % NUM_COLUMNS == 0:
                 cycle_num = i/NUM_COLUMNS
                 self.hits.append({'cycle': cycle_num, 'data': []})
