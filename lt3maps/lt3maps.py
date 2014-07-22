@@ -524,20 +524,15 @@ class T3MAPSChip():
 
     """
 
-    def __init__(self, driver=None, config_file=None):
-        if bool(driver) != bool(config_file):
-            raise ValueError("Exactly 1 of the parameters must be given.")
-        if bool(driver)
-            self._driver = driver
-        else:
-            self._driver = T3MAPSDriver(config_file)
+    def __init__(self, config_file):
+        self._driver = T3MAPSDriver(config_file)
 
         num_columns = 18
-        num_rows = 64
+        num_rows = len(self._driver['PIXEL_REG'])
         self._pixels = [[Pixel(column, row) for column in range(num_columns)]
                         for row in range(num_rows)]
 
-    def _set_bit_latches(self, column_number, rows=None, enable=True, *args):
+    def set_bit_latches(self, column_number, rows_to_enable=None, *args):
         """
         Set the hit and inject latches for the given column.
 
@@ -546,24 +541,24 @@ class T3MAPSChip():
         e.g. args = ['TDAC_strobes', 31] strobes all 5 bits.
 
         """
-        chip = self.chip
+        driver = self._driver
 
         # Construct the pixel register input
-        PIXEL_REGISTER_LENGTH = len(chip['PIXEL_REG'])
+        PIXEL_REGISTER_LENGTH = len(self._pixels[0])
         pixel_register_input = None
-        if not rows:
+        if rows_to_enable is None:
             pixel_register_input = str(int(enable)) * PIXEL_REGISTER_LENGTH
         else:
             pixel_register_input = ["1" if i in rows else "0" for i in
                                     range(PIXEL_REGISTER_LENGTH)]
             pixel_register_input = ''.join(pixel_register_input)
 
-        chip.set_global_register(
+        driver.set_global_register(
             column_address=column_number)
-        chip.write_global_reg()
+        driver.write_global_reg()
 
-        chip.set_pixel_register(pixel_register_input)
-        chip.write_pixel_reg()
+        driver.set_pixel_register(pixel_register_input)
+        driver.write_pixel_reg()
 
         # construct a dict of strobes to pass to set_global_register
         strobes = {arg: 1 for arg in args if not isinstance(arg, int)}
@@ -572,38 +567,58 @@ class T3MAPSChip():
             strobes['TDAC_strobes'] = tdac[0]
 
         # Enable the strobes
-        chip.set_global_register(
+        driver.set_global_register(
             column_address=column_number,
             enable_strobes=1,
             **strobes
             )
-        chip.write_global_reg()
+        driver.write_global_reg()
 
         # Disable the strobes. (New values are saved.)
-        chip.set_global_register(
+        driver.set_global_register(
             column_address=column_number
             )
-        chip.write_global_reg()
+        driver.write_global_reg()
+
+        # Update the saved Pixel TDAC values, maybe
+        if 'TDAC_strobes' in args:
+            for i, enable_str in enumerate(pixel_register_input[::-1]):
+                self._pixels[column_number][i].update_TDAC(
+                    strobes['TDAC_strobes'], 
+                    (enable_str == "1")
+                )
         return
 
+    def set_pixel_register(self, value):
+        self._driver.set_pixel_register(value)
+        self._driver.write_pixel_reg()
+
+    def set_global_register(self, **kwargs):
+        load_DAC = False
+        if 'load_DAC' in kwargs.keys():
+            load_DAC = kwargs['load_DAC']
+            kwargs = {key:value for key, value in kwargs.iteritems() if key !=
+                      'load_DAC'}
+
+        self._driver.set_global_register(**kwargs)
+        self._driver.write_global_reg(load_DAC)
+
+    def run(self, get_output=True):
+        return self._driver.run(get_output)
 
 if __name__ == "__main__":
     # create a chip object
-    chip = T3MAPSDriver("lt3maps.yaml")
+    chip = T3MAPSChip("lt3maps.yaml")
 
     # settings for global register (to input into global SR)
-    chip.set_global_register(column_address=8)
-    chip.write_global_reg(load_DAC=True)
+    chip.set_global_register(column_address=8, load_DAC=True)
 
     # settings for pixel register (to input into pixel SR)
     chip.set_pixel_register('10'*8+'1000'*8+'10000000'*2)
-    chip.write_pixel_reg()
 
     # send in a different (but nonzero) pattern to get out what we
     # sent in before.
     chip.set_pixel_register('1100'*16)
-
-    chip.write_pixel_reg()
 
     # send the commands to the chip and get output back
     output = chip.run()
