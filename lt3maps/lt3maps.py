@@ -491,6 +491,32 @@ class Pixel():
         self.column = column
         self.row = row
         self.TDAC = 0
+        self._TDAC_binary = "00000"
+
+    def update_TDAC(self, strobe_value, enable):
+        """
+        Update the TDAC value after a strobe.
+
+        `strobe_value` is the value of the 5-bit pattern that was sent to TDAC_strobes.
+        `enable` is True if the Pixel's SR bit was 1 for the strobe.
+
+        """
+        TDAC_length = 5
+        enable_str = str(int(enable))
+        new_TDAC_binary = ""
+        # Get a binary representation of the strobe
+        bin_strobe = bin(strobe_value)[2:]
+
+        for i in range(TDAC_length):
+            if bin_strobe[i] == "1":
+                new_TDAC_binary += enable_str
+            else:
+                new_TDAC_binary += self._TDAC_binary[i]
+
+        self._TDAC_binary = new_TDAC_binary
+        self.TDAC = int(new_TDAC_binary, 2)
+
+
 
 class T3MAPSChip():
     """
