@@ -1,21 +1,19 @@
-import scan_inject as scan
-import matplotlib.pyplot as plt
+#import scan_inject as scan
 import numpy as np
 import pprint
 import yaml
-import multiprocessing
 import time
 import random
+import curses
+# Unicode support for curses
+import locale
+locale.setlocale(locale.LC_ALL, '')
+code = locale.getpreferredencoding()
 
-"""
-data_file = open("out.yaml", 'r')
-hit_data = yaml.load(data_file.read())
-cycle_0 = hit_data[0]['data']
-"""
 scanner = None
 try:
     scanner = scan.Scanner("lt3maps/lt3maps.yaml")
-except IOError:
+except:
     def function():
         while True:
             num_hits = random.randint(0,64)
@@ -23,44 +21,57 @@ except IOError:
             random.shuffle(hits)
             hits = hits[:num_hits]
             yield hits
+            time.sleep(1/18.0)
 
     scanner = function()
 
-time_to_sleep = 1
+def present_array(array):
+    symbols = {
+        0: u" ",
+        1: u"\u2588",
+    }
+    symbols = {key: value.encode(code) for key, value in symbols.iteritems()}
+    result = ""
 
-data = np.zeros(64)
-axes = plt.axes(xlim=(0,64), ylim=(0,30))
-line, = plt.plot(data)
-plt.ion()
-plt.ylim([0,30])
-plt.show()
-for i in range(3):
-    col_1_hits = None
-    try:
-        scanner.hits = []
-        scanner.scan(time_to_sleep, 1)
+    for number in array:
+        result += symbols[number]
+    return result
 
-# make a matrix of pixel hits
-        col_1_hits = scanner.hits[0]['data'][1]['hit_rows']
+def get_offset(height, width):
+    NUM_COLUMNS = 64
+    NUM_ROWS = 18
 
-    except:
-        col_1_hits = next(scanner)
+    # want everything centered
+    x_margin = (width - NUM_COLUMNS)/2
+    y_margin = (height - NUM_ROWS)/2
+    return (y_margin, x_margin)
 
-    col_1_diagram = np.zeros(64)
-    col_1_diagram[col_1_hits] = 1
+def application(stdscr):
+    curses.curs_set(0)
+    stdscr.nodelay(1)
+    # calculate the offset of the screen
+    y_offset, x_offset = get_offset(*stdscr.getmaxyx())
+    stdscr.addstr(y_offset - 2, x_offset, "q to quit")
+    stdscr.refresh()
+    while True:
+        col_hits = []
+        try:
+            scanner.hits = []
+            scanner.scan(1, 1)
+            # make a matrix of pixel hits
+            for i in range(len(scanner.hits[0]['data'])):
+                col_hits.append(scanner.hits[0]['data'][i]['hit_rows'])
+        except:
+            for i in range(18):
+                # make a matrix of pixel hits
+                col_hits.append(next(scanner))
+        for i, col_hit in enumerate(col_hits):
+            col_diagram = np.zeros(64)
+            col_diagram[col_hit] = 1
+            stdscr.addstr(i+y_offset, x_offset, present_array(col_diagram))
+        stdscr.refresh()
+        c = stdscr.getch()
+        if c == ord('q'):
+            break
 
-    print col_1_diagram
-
-    line.set_ydata(col_1_diagram)
-    plt.draw()
-    time.sleep(0.1)
-    plt.pause(0.0001)
-
-    """
-    plt.bar(range(64), col_1_diagram, 1)
-    plt.show()
-    """
-
-
-    # check out this website
-    # http://stackoverflow.com/questions/19766100/real-time-matplotlib-plot-is-not-working-while-still-in-a-loop
+curses.wrapper(application)
