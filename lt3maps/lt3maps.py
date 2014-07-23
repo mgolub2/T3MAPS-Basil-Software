@@ -537,20 +537,24 @@ class T3MAPSChip():
         self._pixels = [[Pixel(column, row) for row in range(num_rows)]
                         for column in range(num_columns)]
 
-    def set_bit_latches(self, column_number, rows=None, enable=True, *args):
+    def set_bit_latches(self, column_number, rows, *args):
         """
-        Set the hit and inject latches for the given column.
+        Set the hit, inject and TDAC latches for the given column.
 
-        To set TDAC strobes, pass 'TDAC_strobes' as an arg, and make
-        the next argument be the binary value of the bits to strobe,
-        e.g. args = ['TDAC_strobes', 31] strobes all 5 bits.
+        If `rows` is None, enable all rows. Else enable the row numbers
+        in the list `rows`, disable others. To disable all rows, pass
+        rows=[].
+
+        To set TDAC strobes, pass 'TDAC_strobes' as an arg,
+        and make the next argument be the binary value of the bits to
+        strobe, e.g. args = ['TDAC_strobes', 31] strobes all 5 bits.
 
         """
         # Construct the pixel register input
         PIXEL_REGISTER_LENGTH = len(self._pixels[0])
         pixel_register_input = None
-        if not rows:
-            pixel_register_input = str(int(enable)) * PIXEL_REGISTER_LENGTH
+        if rows is None:
+            pixel_register_input = "1" * PIXEL_REGISTER_LENGTH
         else:
             pixel_register_input = ["1" if i in rows else "0" for i in
                                     range(PIXEL_REGISTER_LENGTH)]
