@@ -604,9 +604,60 @@ class T3MAPSChip():
     def run(self, get_output=True):
         return self._driver.run(get_output)
 
-    def pixel_TDAC_matrix(self):
-        matrix = [[pixel.TDAC for pixel in column] for column in self._pixels]
+    def pixel_TDAC_matrix(self, binary=False):
+        if binary:
+            matrix = [[pixel._TDAC_binary for pixel in column] for column in self._pixels]
+        else:
+            matrix = [[pixel.TDAC for pixel in column] for column in self._pixels]
         return np.array(matrix)
+
+    def _import_TDAC_to_pixels(self, TDAC_matrix):
+        for i, column in enumerate(self._pixels):
+            for j, pixel in enumerate(column):
+                pixel.TDAC = TDAC_matrix[i][j]
+                pixel._TDAC_binary = Pixel.get_n_bit_binary(pixel.TDAC, 5)
+
+    def save_TDAC_to_file(self, filename):
+        """
+        Save the pixel TDAC values to a YAML file.
+
+        """
+        matrix = self.pixel_TDAC_matrix()
+        outfile = open(filename, 'w')
+        outfile.write(yaml.dump(matrix.tolist()))
+
+    def import_TDAC(self, filename):
+        """
+        Import the pixel TDAC vlues from a YAML file.
+
+        """
+        infile = open(filename, 'r')
+        matrix = yaml.load(infile.read())
+        self._import_TDAC_to_pixels(matrix)
+        self._apply_pixel_TDAC_to_chip()
+
+    def _apply_pixel_TDAC_to_chip(self):
+        """
+        Set the pixel TDAC values to those from the software pixels.
+
+        Go 1 column at a time, 1 TDAC bit at a time.
+        """
+        matrix = self.pixel_TDAC_matrix(binary=True)
+        for column_index, column in enumerate(matrix):
+            for TDAC_bit_index in range(len(column[0])):  # normally 5
+                args = ('TDAC_strobes', 2**TDAC_bit_index)
+                # find out which pixels get set to 1
+                rows_to_enable = []
+                for row_index, TDAC_value in enumerate(column):
+                    if TDAC_value[TDAC_bit_index] == "1":
+                        rows_to_enable.append(row_index)
+
+                self.set_bit_latches(column_index, rows_to_enable, *args)
+
+
+
+
+
 
 if __name__ == "__main__":
     # create a chip object
