@@ -562,7 +562,7 @@ class T3MAPSChip():
             load_DAC = kwargs['load_DAC']
             kwargs = {key:value for key,value in kwargs.iteritems() if key != 'load_DAC'}
         self._driver.set_global_register(**kwargs)
-        self._driver.write_global_reg(load_DAC)
+        self._driver.write_global_reg(load_DAC=load_DAC)
 
     def run(self, get_output=True):
         return self._driver.run(get_output)

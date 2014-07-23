@@ -31,7 +31,7 @@ class Scanner(object):
         Reset the S0 and HitLd configuration to "active" mode.
 
         """
-        chip = self.chip._driver
+        chip = self.chip
         # Reset configuration: Configure S0, and HitLD
         chip.set_global_register(
             column_address=column_number,
@@ -41,7 +41,6 @@ class Scanner(object):
             HITLD_IN=1,
             SRCLR_SEL=1
             )
-        chip.write_global_reg()
 
         chip.set_global_register(
             column_address=column_number,
@@ -50,10 +49,7 @@ class Scanner(object):
             S1=0,
             HITLD_IN=1,
             )
-        chip.write_global_reg()
 
-        # run
-        #chip.run(get_output=False)
         return
 
     def _read_column_hits(self, column_number_start, column_number_stop):
@@ -64,16 +60,14 @@ class Scanner(object):
         excluding stop.
 
         """
-        chip = self.chip._driver
+        chip = self.chip
 
         for column_number in range(column_number_start, column_number_stop):
             # reset the S0 and HitLD to 0
             chip.set_global_register(column_address=column_number)
-            chip.write_global_reg()
 
             # read out the pixel register
             chip.set_pixel_register("0" * 64)
-            chip.write_pixel_reg()
 
     def _set_latches_for_scan(self, column_number):
         """
@@ -83,22 +77,21 @@ class Scanner(object):
         for a true source scan...just for debugging.
 
         """
-        chip = self.chip._driver
+        chip = self.chip
 
         # initialize all latches to 0
         latches_to_strobe = ['hitor_strobe', 'hit_strobe', 'inject_strobe',
                              'TDAC_strobes', 31]
-        self.chip._set_bit_latches(column_number, None, False, *latches_to_strobe)
+        chip._set_bit_latches(column_number, None, False, *latches_to_strobe)
 
         # Enable the desired strobes: every other bit, for a recognizable pattern
         latches_to_strobe = ['hit_strobe', 'inject_strobe'] # TODO: change inject
-        self.chip._set_bit_latches(column_number, None, True, *latches_to_strobe)
+        chip._set_bit_latches(column_number, None, True, *latches_to_strobe)
 
         # Remove the bits from setting the strobes
         chip.set_pixel_register("0" * 64)
-        chip.write_pixel_reg()
 
-        self.chip.run(get_output=False)
+        chip.run(get_output=False)
         return
 
     def reset(self):
@@ -116,15 +109,15 @@ class Scanner(object):
         """
         NUM_COLUMNS = 18
         # set up the global dac register
-        self.chip._driver.set_global_register(
+        self.chip.set_global_register(
             PrmpVbp=142,
             PrmpVbf=11,
             vth=150,
             DisVbn=49,
             VbpThStep=100,
             PrmpVbnFol=35,
+            load_DAC=True
             )
-        self.chip._driver.write_global_reg(load_DAC=True)
 
         self.chip.run(get_output=False)
 
