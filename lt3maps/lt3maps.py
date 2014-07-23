@@ -539,8 +539,6 @@ class Pixel(object):
         return binary_value
 
 
-
-
 class T3MAPSChip():
     """
     Control the T3MAPS chip with common functions.
@@ -666,14 +664,17 @@ class T3MAPSChip():
                 # find out which pixels get set to 1
                 rows_to_enable = []
                 for row_index, TDAC_value in enumerate(column):
-                    if TDAC_value[TDAC_bit_index] == "1":
+                    # must reverse TDAC value because place values and
+                    # python indexing are in opposite orders. e.g. the
+                    # 16's place is at index 0 and the 1's place is at
+                    # index 4. When the TDAC value is reversed, the 16's
+                    # place is at index 4 (16 = 2**4), and the 1's place
+                    # is at index 0 (1 = 2**0).
+                    TDAC_value_reversed = TDAC_value[::-1]
+                    if TDAC_value_reversed[TDAC_bit_index] == "1":
                         rows_to_enable.append(row_index)
 
                 self.set_bit_latches(column_index, rows_to_enable, *args)
-
-
-
-
 
 
 if __name__ == "__main__":
