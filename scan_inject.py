@@ -81,11 +81,11 @@ class Scanner(object):
         # initialize all latches to 0
         latches_to_strobe = ['hitor_strobe', 'hit_strobe', 'inject_strobe',
                              'TDAC_strobes', 31]
-        self._set_bit_latches(column_number, None, False, *latches_to_strobe)
+        chip.set_bit_latches(column_number, None, *latches_to_strobe)
 
         # Enable the desired strobes: every other bit, for a recognizable pattern
         latches_to_strobe = ['hit_strobe', 'inject_strobe'] # TODO: change inject
-        self._set_bit_latches(column_number, None, True, *latches_to_strobe)
+        chip.set_bit_latches(column_number, None, *latches_to_strobe)
 
         # Remove the bits from setting the strobes
         chip.set_pixel_register("0" * 64)
@@ -115,8 +115,8 @@ class Scanner(object):
             DisVbn=49,
             VbpThStep=100,
             PrmpVbnFol=35,
-            )
-        self.chip.write_global_reg(load_DAC=True)
+            load_DAC=True
+        )
 
         self.chip.run(get_output=False)
 

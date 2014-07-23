@@ -532,10 +532,12 @@ class T3MAPSChip():
         self._pixels = [[Pixel(column, row) for column in range(num_columns)]
                         for row in range(num_rows)]
 
-    def set_bit_latches(self, column_number, rows_to_enable=None, *args):
+    def set_bit_latches(self, column_number, rows_to_enable, *args):
         """
         Set the hit and inject latches for the given column.
 
+        If `rows_to_enable` is None, then will enable all rows. To
+        disable all rows, set `rows_to_enable` = [].
         To set TDAC strobes, pass 'TDAC_strobes' as an arg, and make
         the next argument be the binary value of the bits to strobe,
         e.g. args = ['TDAC_strobes', 31] strobes all 5 bits.
@@ -563,6 +565,7 @@ class T3MAPSChip():
         # construct a dict of strobes to pass to set_global_register
         strobes = {arg: 1 for arg in args if not isinstance(arg, int)}
         if 'TDAC_strobes' in args:
+            # there should be exactly 1 int in args: the TDAC value
             tdac = [value for value in args if isinstance(value, int)]
             strobes['TDAC_strobes'] = tdac[0]
 
