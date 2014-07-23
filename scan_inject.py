@@ -81,7 +81,7 @@ class Scanner(object):
         # initialize all latches to 0
         latches_to_strobe = ['hitor_strobe', 'hit_strobe', 'inject_strobe',
                              'TDAC_strobes', 31]
-        chip.set_bit_latches(column_number, None, *latches_to_strobe)
+        chip.set_bit_latches(column_number, [], *latches_to_strobe)
 
         # Enable the desired strobes: every other bit, for a recognizable pattern
         latches_to_strobe = ['hit_strobe', 'inject_strobe'] # TODO: change inject

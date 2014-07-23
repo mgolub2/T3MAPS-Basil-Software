@@ -529,8 +529,8 @@ class T3MAPSChip():
 
         num_columns = 18
         num_rows = len(self._driver['PIXEL_REG'])
-        self._pixels = [[Pixel(column, row) for column in range(num_columns)]
-                        for row in range(num_rows)]
+        self._pixels = [[Pixel(column, row) for row in range(num_rows)]
+                        for column in range(num_columns)]
 
     def set_bit_latches(self, column_number, rows_to_enable, *args):
         """
@@ -544,23 +544,19 @@ class T3MAPSChip():
 
         """
         driver = self._driver
-
         # Construct the pixel register input
-        PIXEL_REGISTER_LENGTH = len(self._pixels)
-        pixel_register_input = None
+        PIXEL_REGISTER_LENGTH = len(self._pixels[0])
         if rows_to_enable is None:
             pixel_register_input = "1" * PIXEL_REGISTER_LENGTH
         else:
-            pixel_register_input = ["1" if i in rows else "0" for i in
+            pixel_register_input = ["1" if i in rows_to_enable else "0" for i in
                                     range(PIXEL_REGISTER_LENGTH)]
             pixel_register_input = ''.join(pixel_register_input)
 
-        driver.set_global_register(
+        self.set_global_register(
             column_address=column_number)
-        driver.write_global_reg()
 
-        driver.set_pixel_register(pixel_register_input)
-        driver.write_pixel_reg()
+        self.set_pixel_register(pixel_register_input)
 
         # construct a dict of strobes to pass to set_global_register
         strobes = {arg: 1 for arg in args if not isinstance(arg, int)}
@@ -570,23 +566,19 @@ class T3MAPSChip():
             strobes['TDAC_strobes'] = tdac[0]
 
         # Enable the strobes
-        driver.set_global_register(
+        self.set_global_register(
             column_address=column_number,
             enable_strobes=1,
             **strobes
             )
-        driver.write_global_reg()
 
         # Disable the strobes. (New values are saved.)
-        driver.set_global_register(
-            column_address=column_number
-            )
-        driver.write_global_reg()
+        self.set_global_register(column_address=column_number)
 
         # Update the saved Pixel TDAC values, maybe
         if 'TDAC_strobes' in args:
             for i, enable_str in enumerate(pixel_register_input[::-1]):
-                self._pixels[i][column_number].update_TDAC(
+                self._pixels[column_number][i].update_TDAC(
                     strobes['TDAC_strobes'], 
                     (enable_str == "1")
                 )
@@ -604,7 +596,7 @@ class T3MAPSChip():
                       'load_DAC'}
 
         self._driver.set_global_register(**kwargs)
-        self._driver.write_global_reg(load_DAC)
+        self._driver.write_global_reg(load_DAC=load_DAC)
 
     def run(self, get_output=True):
         return self._driver.run(get_output)
