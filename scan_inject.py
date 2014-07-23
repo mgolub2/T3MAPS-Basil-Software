@@ -101,7 +101,7 @@ class Scanner(object):
         self.hits = []
         self._outputs = []
 
-    def scan(self, sleep, cycles):
+    def scan(self, sleep, cycles, global_threshold=150):
         """
         Perform a source scan and record all hits.
 
@@ -112,7 +112,7 @@ class Scanner(object):
         self.chip.set_global_register(
             PrmpVbp=142,
             PrmpVbf=11,
-            vth=150,
+            vth=global_threshold,
             DisVbn=49,
             VbpThStep=100,
             PrmpVbnFol=35,
