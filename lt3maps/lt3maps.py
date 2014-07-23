@@ -534,7 +534,7 @@ class T3MAPSChip():
 
     def set_bit_latches(self, column_number, rows_to_enable, *args):
         """
-        Set the hit and inject latches for the given column.
+        Set the hit, inject and TDAC latches for the given column.
 
         If `rows_to_enable` is None, then will enable all rows. To
         disable all rows, set `rows_to_enable` = [].
