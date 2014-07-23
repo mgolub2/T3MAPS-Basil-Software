@@ -593,6 +593,10 @@ class T3MAPSChip():
     def run(self, get_output=True):
         return self._driver.run(get_output)
 
+    def pixel_TDAC_matrix(self):
+        matrix = [[pixel.TDAC for pixel in column] for column in self._pixels]
+        return np.array(matrix)
+
 if __name__ == "__main__":
     # create a chip object
     chip = T3MAPSChip("lt3maps.yaml")
