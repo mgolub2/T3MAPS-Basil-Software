@@ -1,4 +1,3 @@
-import scan_inject as scan
 import numpy as np
 import pprint
 import yaml
@@ -10,10 +9,13 @@ import locale
 locale.setlocale(locale.LC_ALL, '')
 code = locale.getpreferredencoding()
 
+have_hardware = True
 scanner = None
 try:
+    import scan_inject as scan
     scanner = scan.Scanner("lt3maps/lt3maps.yaml")
 except:
+    have_hardware = False
     def function():
         while True:
             num_hits = random.randint(0,64)
@@ -48,13 +50,13 @@ def get_offset(height, width):
 
 def get_scan_results(scanner):
     col_hits = []
-    try:
+    if have_hardware:
         scanner.reset()
         scanner.scan(1, 1)
         # make a matrix of pixel hits
         for i in range(len(scanner.hits[0]['data'])):
             col_hits.append(scanner.hits[0]['data'][i]['hit_rows'])
-    except NameError:
+    else:
         for i in range(18):
             # make a matrix of pixel hits
             col_hits.append(next(scanner))
@@ -80,4 +82,8 @@ def application(stdscr):
         if c == ord('q'):
             break
 
-curses.wrapper(application)
+def run_curses():
+    curses.wrapper(application)
+
+if __name__ == "__main__":
+    run_curses()
