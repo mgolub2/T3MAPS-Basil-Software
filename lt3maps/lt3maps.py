@@ -520,11 +520,10 @@ class T3MAPSChip():
 
     def __init__(self, config_file):
         self._driver = T3MAPSDriver(config_file)
-
-        num_columns = 18
-        num_rows = len(self._driver['PIXEL_REG'])
-        self._pixels = [[Pixel(column, row) for row in range(num_rows)]
-                        for column in range(num_columns)]
+        self.num_columns = 18
+        self.num_rows = len(self._driver['PIXEL_REG'])
+        self._pixels = [[Pixel(column, row) for row in range(self.num_rows)]
+                        for column in range(self.num_columns)]
 
     def set_bit_latches(self, column_number, rows_to_enable, *args):
         """
@@ -539,12 +538,11 @@ class T3MAPSChip():
         """
         driver = self._driver
         # Construct the pixel register input
-        PIXEL_REGISTER_LENGTH = len(self._pixels[0])
         if rows_to_enable is None:
-            pixel_register_input = "1" * PIXEL_REGISTER_LENGTH
+            pixel_register_input = "1" * self.num_rows
         else:
             pixel_register_input = ["1" if i in rows_to_enable else "0" for i in
-                                    range(PIXEL_REGISTER_LENGTH)]
+                                    range(self.num_rows)]
             pixel_register_input = ''.join(pixel_register_input)
 
         self.set_global_register(

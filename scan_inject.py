@@ -66,7 +66,7 @@ class Scanner(object):
             chip.set_global_register(column_address=column_number)
 
             # read out the pixel register
-            chip.set_pixel_register("0" * 64)
+            chip.set_pixel_register("0" * chip.num_rows)
 
     def _set_latches_for_scan(self, column_number):
         """
@@ -88,7 +88,7 @@ class Scanner(object):
         chip.set_bit_latches(column_number, None, *latches_to_strobe)
 
         # Remove the bits from setting the strobes
-        chip.set_pixel_register("0" * 64)
+        chip.set_pixel_register("0" * chip.num_rows)
 
         chip.run(get_output=False)
         return
@@ -106,7 +106,8 @@ class Scanner(object):
         Perform a source scan and record all hits.
 
         """
-        NUM_COLUMNS = 18
+        NUM_COLUMNS = self.chip.num_columns
+        NUM_ROWS = self.chip.num_rows
         # set up the global dac register
         self.chip.set_global_register(
             PrmpVbp=142,
@@ -132,8 +133,9 @@ class Scanner(object):
                 self._read_column_hits(i, i + num_cols_together)
                 output = self.chip.run()
                 read_time = time.time()
-                outputs = [(output[i:i+64], read_time) for i in range(0, num_cols_together * 64, 64)]
-                map(self._outputs.append, outputs)
+                starts = range(0, num_cols_together * NUM_ROWS, NUM_ROWS)
+                outputs = [(output[i:i+NUM_ROWS], read_time) for i in starts]
+                self._outputs.extend(outputs)
 
         cycle_num = 0
         for i, (output, read_time) in enumerate(self._outputs):
