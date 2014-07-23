@@ -546,7 +546,7 @@ class T3MAPSChip():
         driver = self._driver
 
         # Construct the pixel register input
-        PIXEL_REGISTER_LENGTH = len(self._pixels[0])
+        PIXEL_REGISTER_LENGTH = len(self._pixels)
         pixel_register_input = None
         if rows_to_enable is None:
             pixel_register_input = "1" * PIXEL_REGISTER_LENGTH
@@ -586,7 +586,7 @@ class T3MAPSChip():
         # Update the saved Pixel TDAC values, maybe
         if 'TDAC_strobes' in args:
             for i, enable_str in enumerate(pixel_register_input[::-1]):
-                self._pixels[column_number][i].update_TDAC(
+                self._pixels[i][column_number].update_TDAC(
                     strobes['TDAC_strobes'], 
                     (enable_str == "1")
                 )
