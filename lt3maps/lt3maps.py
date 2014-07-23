@@ -511,7 +511,7 @@ class T3MAPSChip():
         self._pixels = [[Pixel(column, row) for row in range(num_rows)]
                         for column in range(num_columns)]
 
-    def _set_bit_latches(self, column_number, rows=None, enable=True, *args):
+    def set_bit_latches(self, column_number, rows=None, enable=True, *args):
         """
         Set the hit and inject latches for the given column.
 
