@@ -499,9 +499,9 @@ class T3MAPSChip():
     """
 
     def __init__(self, driver=None, config_file=None):
-        if bool(driver) != bool(config_file):
+        if not (bool(driver) != bool(config_file)):
             raise ValueError("Exactly 1 of the parameters must be given.")
-        if bool(driver)
+        if bool(driver):
             self._driver = driver
         else:
             self._driver = T3MAPSDriver(config_file)
@@ -520,10 +520,10 @@ class T3MAPSChip():
         e.g. args = ['TDAC_strobes', 31] strobes all 5 bits.
 
         """
-        chip = self.chip
+        driver = self._driver
 
         # Construct the pixel register input
-        PIXEL_REGISTER_LENGTH = len(chip['PIXEL_REG'])
+        PIXEL_REGISTER_LENGTH = len(driver['PIXEL_REG'])
         pixel_register_input = None
         if not rows:
             pixel_register_input = str(int(enable)) * PIXEL_REGISTER_LENGTH
@@ -532,12 +532,12 @@ class T3MAPSChip():
                                     range(PIXEL_REGISTER_LENGTH)]
             pixel_register_input = ''.join(pixel_register_input)
 
-        chip.set_global_register(
+        driver.set_global_register(
             column_address=column_number)
-        chip.write_global_reg()
+        driver.write_global_reg()
 
-        chip.set_pixel_register(pixel_register_input)
-        chip.write_pixel_reg()
+        driver.set_pixel_register(pixel_register_input)
+        driver.write_pixel_reg()
 
         # construct a dict of strobes to pass to set_global_register
         strobes = {arg: 1 for arg in args if not isinstance(arg, int)}
@@ -546,18 +546,18 @@ class T3MAPSChip():
             strobes['TDAC_strobes'] = tdac[0]
 
         # Enable the strobes
-        chip.set_global_register(
+        driver.set_global_register(
             column_address=column_number,
             enable_strobes=1,
             **strobes
             )
-        chip.write_global_reg()
+        driver.write_global_reg()
 
         # Disable the strobes. (New values are saved.)
-        chip.set_global_register(
+        driver.set_global_register(
             column_address=column_number
             )
-        chip.write_global_reg()
+        driver.write_global_reg()
         return
 
 

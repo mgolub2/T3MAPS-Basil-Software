@@ -21,7 +21,7 @@ class Scanner(object):
     """
 
     def __init__(self, config_file_location):
-        self.chip = T3MAPSDriver(config_file_location)
+        self.chip = T3MAPSChip(config_file=config_file_location)
         self.hits = []
         self._outputs = []
 
@@ -31,7 +31,7 @@ class Scanner(object):
         Reset the S0 and HitLd configuration to "active" mode.
 
         """
-        chip = self.chip
+        chip = self.chip._driver
         # Reset configuration: Configure S0, and HitLD
         chip.set_global_register(
             column_address=column_number,
@@ -64,7 +64,7 @@ class Scanner(object):
         excluding stop.
 
         """
-        chip = self.chip
+        chip = self.chip._driver
 
         for column_number in range(column_number_start, column_number_stop):
             # reset the S0 and HitLD to 0
@@ -83,16 +83,16 @@ class Scanner(object):
         for a true source scan...just for debugging.
 
         """
-        chip = self.chip
+        chip = self.chip._driver
 
         # initialize all latches to 0
         latches_to_strobe = ['hitor_strobe', 'hit_strobe', 'inject_strobe',
                              'TDAC_strobes', 31]
-        self._set_bit_latches(column_number, None, False, *latches_to_strobe)
+        self.chip._set_bit_latches(column_number, None, False, *latches_to_strobe)
 
         # Enable the desired strobes: every other bit, for a recognizable pattern
         latches_to_strobe = ['hit_strobe', 'inject_strobe'] # TODO: change inject
-        self._set_bit_latches(column_number, None, True, *latches_to_strobe)
+        self.chip._set_bit_latches(column_number, None, True, *latches_to_strobe)
 
         # Remove the bits from setting the strobes
         chip.set_pixel_register("0" * 64)
@@ -116,7 +116,7 @@ class Scanner(object):
         """
         NUM_COLUMNS = 18
         # set up the global dac register
-        self.chip.set_global_register(
+        self.chip._driver.set_global_register(
             PrmpVbp=142,
             PrmpVbf=11,
             vth=150,
@@ -124,9 +124,9 @@ class Scanner(object):
             VbpThStep=100,
             PrmpVbnFol=35,
             )
-        self.chip.write_global_reg(load_DAC=True)
+        self.chip._driver.write_global_reg(load_DAC=True)
 
-        self.chip.run(get_output=False)
+        self.chip._driver.run(get_output=False)
 
         for i in range(NUM_COLUMNS):
             self._set_latches_for_scan(i)
@@ -134,11 +134,11 @@ class Scanner(object):
         num_cols_together = 9
         for _ in range(cycles):
             self._reset_hit_configuration(0)
-            self.chip.run()
+            self.chip._driver.run()
             time.sleep(sleep)
             for i in range(0, NUM_COLUMNS, num_cols_together):
                 self._read_column_hits(i, i + num_cols_together)
-                output = self.chip.run()
+                output = self.chip._driver.run()
                 read_time = time.time()
                 outputs = [(output[i:i+64], read_time) for i in range(0, num_cols_together * 64, 64)]
                 map(self._outputs.append, outputs)
