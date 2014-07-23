@@ -134,7 +134,7 @@ class T3MAPSDriver(Dut):
         # Make sure the chip is reset
         self.reset_seq()
 
-    def write_global_reg(self, position=None, load_DAC=False):
+    def write_global_reg(self, load_DAC=False):
         """
         Add the global register to the command to send to the chip.
 
@@ -184,12 +184,9 @@ class T3MAPSDriver(Dut):
             value += '0' * relative_length
 
         # add the block to the list of blocks to write
-        if position:
-            self._blocks.insert(position, seq)
-        else:
-            self._blocks.append(seq)
+        self._blocks.append(seq)
 
-    def write_pixel_reg(self, position=None):
+    def write_pixel_reg(self):
         """
         Add the pixel register to the command to send to the chip.
 
@@ -210,10 +207,7 @@ class T3MAPSDriver(Dut):
         seq['PIXEL_SHIFT_EN'][0:px_size] = bitarray(px_size * '1')
 
         # add the block to the list of blocks to write
-        if position:
-            self._blocks.insert(position, seq)
-        else:
-            self._blocks.append(seq)
+        self._blocks.append(seq)
 
     def write_injection(self, delay_until_rise):
         """
