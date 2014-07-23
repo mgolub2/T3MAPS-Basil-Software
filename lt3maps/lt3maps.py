@@ -480,12 +480,31 @@ class T3MAPSDriver(Dut):
 
         return to_return
 
-class Pixel():
+
+class Pixel(object):
     def __init__(self, column, row):
         self.column = column
         self.row = row
-        self.TDAC = 0
+        self._TDAC = 0
         self._TDAC_binary = "00000"
+        self._TDAC_size = 5
+
+    @property
+    def TDAC(self):
+        """
+        Get the TDAC value.
+
+        """
+        return self._TDAC
+
+    @TDAC.setter
+    def TDAC(self, value):
+        """
+        Set the TDAC value and update the binary.
+
+        """
+        self._TDAC = value
+        self._TDAC_binary = Pixel.get_n_bit_binary(value, self._TDAC_size)
 
     def update_TDAC(self, strobe_value, enable):
         """
@@ -507,7 +526,6 @@ class Pixel():
             else:
                 new_TDAC_binary += self._TDAC_binary[i]
 
-        self._TDAC_binary = new_TDAC_binary
         self.TDAC = int(new_TDAC_binary, 2)
 
     @staticmethod
@@ -615,7 +633,6 @@ class T3MAPSChip():
         for i, column in enumerate(self._pixels):
             for j, pixel in enumerate(column):
                 pixel.TDAC = TDAC_matrix[i][j]
-                pixel._TDAC_binary = Pixel.get_n_bit_binary(pixel.TDAC, 5)
 
     def save_TDAC_to_file(self, filename):
         """
