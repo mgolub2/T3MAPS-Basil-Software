@@ -64,26 +64,39 @@ def get_scan_results(scanner):
     return col_hits
 
 
-def application(stdscr):
-    curses.curs_set(0)
-    stdscr.nodelay(1)
-    # calculate the offset of the screen
-    y_offset, x_offset = get_offset(*stdscr.getmaxyx())
-    stdscr.addstr(y_offset - 2, x_offset, "q to quit")
-    stdscr.refresh()
-    while True:
-        col_hits = get_scan_results(scanner)
-        for i, col_hit in enumerate(col_hits):
-            col_diagram = np.zeros(64)
-            col_diagram[col_hit] = 1
-            stdscr.addstr(i+y_offset, x_offset, present_array(col_diagram))
+def get_application(scan_function):
+    def application(stdscr):
+        curses.curs_set(0)
+        stdscr.nodelay(1)
+        # calculate the offset of the screen
+        y_offset, x_offset = get_offset(*stdscr.getmaxyx())
+        stdscr.addstr(y_offset - 2, x_offset, "q to quit")
         stdscr.refresh()
-        c = stdscr.getch()
-        if c == ord('q'):
-            break
+        while True:
+            # run the scan
+            col_hits = scan_function(scanner)
+            # process the results
+            for i, col_hit in enumerate(col_hits):
+                col_diagram = np.zeros(64)
+                col_diagram[col_hit] = 1
+                # display the results
+                stdscr.addstr(i+y_offset, x_offset, present_array(col_diagram))
+            stdscr.refresh()
+            c = stdscr.getch()
+            if c == ord('q'):
+                break
+    return application
 
-def run_curses():
-    curses.wrapper(application)
+def run_curses(scan_function=get_scan_results):
+    """
+    Run the curses application with the given scanning function.
+
+    The scan function should take a Scanner object as input and should
+    output a list of lists, where each outer list is a column of the
+    chip and each inner list lists the rows that have been hit. It will
+    be run in an infinite loop.
+    """
+    curses.wrapper(get_application(scan_function))
 
 if __name__ == "__main__":
     run_curses()
