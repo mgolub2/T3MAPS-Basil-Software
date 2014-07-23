@@ -508,8 +508,8 @@ class T3MAPSChip():
 
         num_columns = 18
         num_rows = 64
-        self._pixels = [[Pixel(column, row) for column in range(num_columns)]
-                        for row in range(num_rows)]
+        self._pixels = [[Pixel(column, row) for row in range(num_rows)]
+                        for column in range(num_columns)]
 
     def _set_bit_latches(self, column_number, rows=None, enable=True, *args):
         """
@@ -520,10 +520,8 @@ class T3MAPSChip():
         e.g. args = ['TDAC_strobes', 31] strobes all 5 bits.
 
         """
-        driver = self._driver
-
         # Construct the pixel register input
-        PIXEL_REGISTER_LENGTH = len(driver['PIXEL_REG'])
+        PIXEL_REGISTER_LENGTH = len(self._pixels[0])
         pixel_register_input = None
         if not rows:
             pixel_register_input = str(int(enable)) * PIXEL_REGISTER_LENGTH
@@ -532,12 +530,10 @@ class T3MAPSChip():
                                     range(PIXEL_REGISTER_LENGTH)]
             pixel_register_input = ''.join(pixel_register_input)
 
-        driver.set_global_register(
+        self.set_global_register(
             column_address=column_number)
-        driver.write_global_reg()
 
-        driver.set_pixel_register(pixel_register_input)
-        driver.write_pixel_reg()
+        self.set_pixel_register(pixel_register_input)
 
         # construct a dict of strobes to pass to set_global_register
         strobes = {arg: 1 for arg in args if not isinstance(arg, int)}
@@ -546,19 +542,30 @@ class T3MAPSChip():
             strobes['TDAC_strobes'] = tdac[0]
 
         # Enable the strobes
-        driver.set_global_register(
+        self.set_global_register(
             column_address=column_number,
             enable_strobes=1,
             **strobes
             )
-        driver.write_global_reg()
 
         # Disable the strobes. (New values are saved.)
-        driver.set_global_register(
-            column_address=column_number
-            )
-        driver.write_global_reg()
+        self.set_global_register(column_address=column_number)
         return
+
+    def set_pixel_register(self, value):
+        self._driver.set_pixel_register(value)
+        self._driver.write_pixel_reg()
+
+    def set_global_register(self, **kwargs):
+        load_DAC = False
+        if 'load_DAC' in kwargs.keys():
+            load_DAC = kwargs['load_DAC']
+            kwargs = {key:value for key,value in kwargs.iteritems() if key != 'load_DAC'}
+        self._driver.set_global_register(**kwargs)
+        self._driver.write_global_reg(load_DAC)
+
+    def run(self, get_output=True):
+        return self._driver.run(get_output)
 
 
 if __name__ == "__main__":

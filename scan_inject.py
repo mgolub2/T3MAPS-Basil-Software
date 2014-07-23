@@ -98,7 +98,7 @@ class Scanner(object):
         chip.set_pixel_register("0" * 64)
         chip.write_pixel_reg()
 
-        chip.run(get_output=False)
+        self.chip.run(get_output=False)
         return
 
     def reset(self):
@@ -126,7 +126,7 @@ class Scanner(object):
             )
         self.chip._driver.write_global_reg(load_DAC=True)
 
-        self.chip._driver.run(get_output=False)
+        self.chip.run(get_output=False)
 
         for i in range(NUM_COLUMNS):
             self._set_latches_for_scan(i)
@@ -134,11 +134,11 @@ class Scanner(object):
         num_cols_together = 9
         for _ in range(cycles):
             self._reset_hit_configuration(0)
-            self.chip._driver.run()
+            self.chip.run()
             time.sleep(sleep)
             for i in range(0, NUM_COLUMNS, num_cols_together):
                 self._read_column_hits(i, i + num_cols_together)
-                output = self.chip._driver.run()
+                output = self.chip.run()
                 read_time = time.time()
                 outputs = [(output[i:i+64], read_time) for i in range(0, num_cols_together * 64, 64)]
                 map(self._outputs.append, outputs)
