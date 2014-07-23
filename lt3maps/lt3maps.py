@@ -499,7 +499,7 @@ class Pixel():
         enable_str = str(int(enable))
         new_TDAC_binary = ""
         # Get a binary representation of the strobe
-        bin_strobe = bin(strobe_value)[2:]
+        bin_strobe = Pixel.get_n_bit_binary(strobe_value, TDAC_length)
 
         for i in range(TDAC_length):
             if bin_strobe[i] == "1":
@@ -509,6 +509,17 @@ class Pixel():
 
         self._TDAC_binary = new_TDAC_binary
         self.TDAC = int(new_TDAC_binary, 2)
+
+    @staticmethod
+    def get_n_bit_binary(x, n):
+        binary_value = bin(x)[2:]
+        binary_length = len(binary_value)
+        if binary_length <= n:
+            binary_value = "0"*(n - binary_length) + binary_value
+        else:
+            raise ValueError("%i is too big to fit into %i bits" % (x,n))
+        return binary_value
+
 
 
 
