@@ -549,7 +549,7 @@ class T3MAPSChip():
         PIXEL_REGISTER_LENGTH = len(self._pixels[0])
         pixel_register_input = None
         if rows_to_enable is None:
-            pixel_register_input = str(int(enable)) * PIXEL_REGISTER_LENGTH
+            pixel_register_input = "1" * PIXEL_REGISTER_LENGTH
         else:
             pixel_register_input = ["1" if i in rows else "0" for i in
                                     range(PIXEL_REGISTER_LENGTH)]
