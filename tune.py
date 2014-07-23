@@ -16,12 +16,12 @@ class Tuner(object):
         if not scan_analysis.have_hardware:
             raise NotImplementedError("Don't know what to do when there's no \
             hardware")
+        self.global_threshold = 255
 
     def tune(self):
-        scan_analysis.run_curses(Tuner.scan_function)
+        scan_analysis.run_curses(self.get_scan_function())
 
-    @staticmethod
-    def scan_function(scanner):
+    def get_scan_function(self):
         """
         Tune the chip so all pixels have the same actual threshold.
 
@@ -51,14 +51,17 @@ class Tuner(object):
                 triggered by noise.
 
         """
-        col_hits = []
-        global_threshold = 255
-        scanner.reset()
-        scanner.scan(1, 1, global_threshold)
-        # make a matrix of pixel hits
-        for i in range(len(scanner.hits[0]['data'])):
-            col_hits.append(scanner.hits[0]['data'][i]['hit_rows'])
-        return col_hits
+        def scan_function(scanner):
+            col_hits = []
+            global_threshold = self.global_threshold
+            scanner.reset()
+            scanner.scan(1, 1, global_threshold)
+            # make a matrix of pixel hits
+            for i in range(len(scanner.hits[0]['data'])):
+                col_hits.append(scanner.hits[0]['data'][i]['hit_rows'])
+            self.global_threshold = global_threshold - 5   
+            return col_hits
+        return scan_function
 
 if __name__ == "__main__":
     tuner = Tuner()
