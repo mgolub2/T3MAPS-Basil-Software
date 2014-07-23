@@ -21,10 +21,9 @@ class Scanner(object):
     """
 
     def __init__(self, config_file_location):
-        self.chip = T3MAPSDriver(config_file_location)
+        self.chip = T3MAPSChip(config_file_location)
         self.hits = []
         self._outputs = []
-
 
     def _reset_hit_configuration(self, column_number):
         """
@@ -41,7 +40,6 @@ class Scanner(object):
             HITLD_IN=1,
             SRCLR_SEL=1
             )
-        chip.write_global_reg()
 
         chip.set_global_register(
             column_address=column_number,
@@ -50,10 +48,7 @@ class Scanner(object):
             S1=0,
             HITLD_IN=1,
             )
-        chip.write_global_reg()
 
-        # run
-        #chip.run(get_output=False)
         return
 
     def _read_column_hits(self, column_number_start, column_number_stop):
@@ -69,11 +64,9 @@ class Scanner(object):
         for column_number in range(column_number_start, column_number_stop):
             # reset the S0 and HitLD to 0
             chip.set_global_register(column_address=column_number)
-            chip.write_global_reg()
 
             # read out the pixel register
             chip.set_pixel_register("0" * 64)
-            chip.write_pixel_reg()
 
     def _set_latches_for_scan(self, column_number):
         """
@@ -96,7 +89,6 @@ class Scanner(object):
 
         # Remove the bits from setting the strobes
         chip.set_pixel_register("0" * 64)
-        chip.write_pixel_reg()
 
         chip.run(get_output=False)
         return
