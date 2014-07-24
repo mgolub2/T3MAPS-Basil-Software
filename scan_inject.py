@@ -14,6 +14,7 @@ import time
 import yaml
 import argparse
 
+import logging
 class Scanner(object):
     """
     Scan for hits on the LT3MAPS chip.
@@ -109,6 +110,7 @@ class Scanner(object):
         NUM_COLUMNS = self.chip.num_columns
         NUM_ROWS = self.chip.num_rows
         # set up the global dac register
+        logging.debug("global threshold = " + str(global_threshold))
         self.chip.set_global_register(
             PrmpVbp=142,
             PrmpVbf=11,

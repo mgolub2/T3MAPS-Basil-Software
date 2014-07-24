@@ -6,6 +6,7 @@ A module for tuning the T3MAPS chip.
 import scan_inject as scan
 import scan_analysis
 import lt3maps
+import logging
 
 class Tuner(object):
     """
@@ -83,4 +84,5 @@ class Tuner(object):
 
 if __name__ == "__main__":
     tuner = Tuner()
+    logging.basicConfig(filename="tuning.log", level=logging.DEBUG)
     tuner.tune()

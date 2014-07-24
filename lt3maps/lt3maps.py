@@ -13,6 +13,7 @@ import yaml
 import numpy as np
 import time
 from bitarray import bitarray
+import logging
 
 from basil.dut import Dut
 
@@ -503,6 +504,8 @@ class Pixel(object):
         Set the TDAC value and update the binary.
 
         """
+        string = "setting " + str((self.column, self.row)) + " to " + str(value)
+        #logging.debug(string)
         self._TDAC = value
         self._TDAC_binary = Pixel.get_n_bit_binary(value, self._TDAC_size)
 
