@@ -24,12 +24,12 @@ class Tuner(object):
         if self.viewer is None:
             self._tune_loop()
         else:
-            self.viewer.run_curses(self.get_scan_function())
+            self.viewer.run_curses(self.get_scan_function(range(1,17)))
 
     def _tune_loop(self):
         keep_going = True
         while keep_going:
-            col_hits, keep_going = self.get_scan_function()()
+            col_hits, keep_going = self.get_scan_function(range(1,17))()
             hit_pixels = self._get_hit_pixels(col_hits)
             print "(", self.global_threshold, ",", len(hit_pixels), ")"
 
@@ -39,7 +39,7 @@ class Tuner(object):
                               for row in column]
         return hit_pixels
 
-    def get_scan_function(self):
+    def get_scan_function(self, columns_to_scan=range(18)):
         """
         Tune the chip so all pixels have the same actual threshold.
 
@@ -69,6 +69,7 @@ class Tuner(object):
                 triggered by noise.
 
         """
+        num_pixels_to_tune = len(columns_to_scan) * self.scanner.chip.num_rows
         def scan_function():
             logging.info("beginning scan_function")
             keep_going = True
@@ -78,7 +79,11 @@ class Tuner(object):
             self.scanner.scan(1, 1, global_threshold)
             # make a matrix of pixel hits
             for i in range(len(self.scanner.hits[0]['data'])):
-                col_hits.append(self.scanner.hits[0]['data'][i]['hit_rows'])
+                if i in columns_to_scan:
+                    col_hits.append(self.scanner.hits[0]['data'][i]['hit_rows'])
+                else:
+                     col_hits.append([])
+
             # analyze results
             #self.global_threshold = global_threshold - 5   # TODO
             if sum(sum(col) for col in col_hits) == 0:
