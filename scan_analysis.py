@@ -5,6 +5,7 @@ import yaml
 import time
 import random
 import curses
+import functools
 # Unicode support for curses
 import locale
 locale.setlocale(locale.LC_ALL, '')
@@ -17,21 +18,7 @@ class ChipViewer(object):
     """
     
     def __init__(self):
-        self._have_hardware = True
-        self.scanner = None
-        try:
-            self.scanner = scan.Scanner("lt3maps/lt3maps.yaml")
-        except:
-            self._have_hardware = False
-            def random_generator():
-                while True:
-                    num_hits = random.randint(0,64)
-                    hits = range(64)
-                    random.shuffle(hits)
-                    hits = hits[:num_hits]
-                    yield hits
-                    time.sleep(1/18.0)
-            self.scanner = random_generator()
+        pass
 
     @staticmethod
     def _present_array(array):
@@ -64,7 +51,7 @@ class ChipViewer(object):
         # make a matrix of pixel hits
         for i in range(len(scanner.hits[0]['data'])):
             col_hits.append(scanner.hits[0]['data'][i]['hit_rows'])
-        return col_hits
+        return col_hits, True
 
     @staticmethod
     def _get_scan_results_software(scanner):
@@ -72,7 +59,7 @@ class ChipViewer(object):
         for i in range(18):
             # make a matrix of pixel hits
             col_hits.append(next(scanner))
-        return col_hits
+        return col_hits, True
 
 
     def _get_application(self, scan_function):
@@ -83,9 +70,10 @@ class ChipViewer(object):
             y_offset, x_offset = ChipViewer._get_offset(*stdscr.getmaxyx())
             stdscr.addstr(y_offset - 2, x_offset, "q to quit")
             stdscr.refresh()
-            while True:
+            stay_in_loop = True
+            while stay_in_loop:
                 # run the scan
-                col_hits = scan_function(self.scanner)
+                col_hits, stay_in_loop = scan_function()
                 # process the results
                 for i, col_hit in enumerate(col_hits):
                     col_diagram = np.zeros(64)
@@ -103,16 +91,39 @@ class ChipViewer(object):
         """
         Run the curses application with the given scanning function.
 
-        The scan function should take a Scanner object as input and should
-        output a list of lists, where each outer list is a column of the
-        chip and each inner list lists the rows that have been hit. It will
-        be run in an infinite loop.
+        The scan function should take no input and should output a
+        2-tuple. The first item should be a list of lists, where each
+        outer list is a column of the chip and each inner list lists the
+        rows that have been hit. The second item should be a boolean
+        which is True if the program should repeat, False if the program
+        should stop running. It will be run in an infinite loop until
+        the 2nd item of the tuple is False.
         """
+        # Do this by default, if no function is specified
         if scan_function is None:
+            self.scanner = None
+            self._have_hardware = True
+            try:
+                self.scanner = scan.Scanner("lt3maps/lt3maps.yaml")
+            except:
+                self._have_hardware = False
+                def random_generator():
+                    while True:
+                        num_hits = random.randint(0,64)
+                        hits = range(64)
+                        random.shuffle(hits)
+                        hits = hits[:num_hits]
+                        yield hits
+                        time.sleep(1/18.0)
+                self.scanner = random_generator()
             if self._have_hardware:
                 scan_function = ChipViewer._get_scan_results_hardware
+                scan_function = functools.partial(scan_function, self.scanner)
             else:
                 scan_function = ChipViewer._get_scan_results_software
+                scan_function = functools.partial(scan_function, self.scanner)
+
+        # Do this always
         curses.wrapper(self._get_application(scan_function))
 
 if __name__ == "__main__":
