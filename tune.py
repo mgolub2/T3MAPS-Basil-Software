@@ -12,15 +12,20 @@ class Tuner(object):
     Manages a chip tuning.
 
     """
-    def __init__(self):
-        if not scan_analysis.have_hardware:
-            raise NotImplementedError("Don't know what to do when there's no \
-            hardware")
+    def __init__(self, view=True):
         self.global_threshold = 255
         self.TDACs = [[0 for _ in range(64)] for _ in range(18)]
+        if view:
+            self.viewer = scan_analysis.ChipViewer()
+            if not self.viewer._have_hardware:
+                raise NotImplementedError("Need hardware connection.")
 
     def tune(self):
-        scan_analysis.run_curses(self.get_scan_function())
+        viewer = getattr(self, 'viewer', None)
+        if viewer is None:
+            self._tune_loop()
+        else:
+            self.viewer.run_curses(self.get_scan_function())
 
     def get_scan_function(self):
         """
