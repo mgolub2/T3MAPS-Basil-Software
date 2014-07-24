@@ -17,6 +17,7 @@ class Tuner(object):
             raise NotImplementedError("Don't know what to do when there's no \
             hardware")
         self.global_threshold = 255
+        self.TDACs = [[0 for _ in range(64)] for _ in range(18)]
 
     def tune(self):
         scan_analysis.run_curses(self.get_scan_function())
@@ -59,7 +60,19 @@ class Tuner(object):
             # make a matrix of pixel hits
             for i in range(len(scanner.hits[0]['data'])):
                 col_hits.append(scanner.hits[0]['data'][i]['hit_rows'])
-            self.global_threshold = global_threshold - 5   
+            # analyze results
+            if sum(sum(col) for col in col_hits) == 0:
+                # if no hits, reduce global threshold
+                self.global_threshold = global_threshold - 5   
+            else:
+                # find the pixels which have been hit
+                hit_pixels = [(col, row) for col, column in enumerate(col_hits)
+                              for row, val in enumerate(column)
+                              if val == 1]
+                # raise those pixels' TDAC values
+                for col, row in hit_pixels:
+                    self.TDACs[col][row] += 1
+                # TODO: Apply new TDAC values to chip
             return col_hits
         return scan_function
 
