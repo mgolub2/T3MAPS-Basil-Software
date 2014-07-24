@@ -16,7 +16,9 @@ class Tuner(object):
     def __init__(self, view=True):
         self.global_threshold = 135
         self.scanner = scan.Scanner("lt3maps/lt3maps.yaml")
+        self.scanner.set_all_TDACs(0)
         self.viewer = None
+        self.tuned_pixels = []
         if view:
             self.viewer = scan_analysis.ChipViewer()
 
@@ -71,12 +73,15 @@ class Tuner(object):
         """
         num_pixels_to_tune = len(columns_to_scan) * self.scanner.chip.num_rows
         def scan_function():
-            logging.info("beginning scan_function")
+            # initialize
             keep_going = True
             col_hits = []
             global_threshold = self.global_threshold
             self.scanner.reset()
+
+            # Scan
             self.scanner.scan(1, 1, global_threshold)
+
             # make a matrix of pixel hits
             for i in range(len(self.scanner.hits[0]['data'])):
                 if i in columns_to_scan:
@@ -85,13 +90,16 @@ class Tuner(object):
                      col_hits.append([])
 
             # analyze results
-            #self.global_threshold = global_threshold - 5   # TODO
+            # Check if there were any hits
             if sum(sum(col) for col in col_hits) == 0:
                 # if no hits, reduce global threshold
                 self.global_threshold = global_threshold - 1
                 if self.global_threshold < 0:
                     keep_going = False
+                hit_pixels = self._get_hit_pixels(col_hits)
+                logging.debug("number of hit pixels: " + str(len(hit_pixels)))
             else:
+                # if there are hits, increase the TDACs of the hit pixels
                 # find the pixels which have been hit
                 hit_pixels = self._get_hit_pixels(col_hits)
                 # raise those pixels' TDAC values
@@ -109,12 +117,18 @@ class Tuner(object):
                             self.tuned_pixels.append((col, row))
                 # Apply new TDAC values to chip
                 self.scanner.chip._apply_pixel_TDAC_to_chip()
-                logging.debug("new TDAC array:")
-                logging.debug(self.scanner.chip.pixel_TDAC_matrix()[0])
+                #logging.debug("new TDAC array:")
+                #logging.debug(self.scanner.chip.pixel_TDAC_matrix()[4])
+                if num_maxed_out_pixels >= 5:
+                    keep_going = False
+            logging.info("number of pixels tuned: " +
+                str(len(self.tuned_pixels)))
+            if len(self.tuned_pixels) == num_pixels_to_tune:
+                keep_going = False
             return col_hits, keep_going
         return scan_function
 
 if __name__ == "__main__":
     logging.basicConfig(filename="tuning.log", level=logging.DEBUG)
-    tuner = Tuner(view=False)
+    tuner = Tuner(view=True)
     tuner.tune()
