@@ -23,6 +23,7 @@ class Scanner(object):
 
     def __init__(self, config_file_location):
         self.chip = T3MAPSChip(config_file_location)
+        self.initialize_latches()
         self.hits = []
         self._outputs = []
 
@@ -79,11 +80,6 @@ class Scanner(object):
         """
         chip = self.chip
 
-        # initialize all latches to 0
-        latches_to_strobe = ['hitor_strobe', 'hit_strobe', 'inject_strobe',
-                             'TDAC_strobes', 31]
-        chip.set_bit_latches(column_number, [], *latches_to_strobe)
-
         # Enable the desired strobes: every other bit, for a recognizable pattern
         latches_to_strobe = ['hit_strobe', 'inject_strobe'] # TODO: change inject
         chip.set_bit_latches(column_number, None, *latches_to_strobe)
@@ -101,6 +97,18 @@ class Scanner(object):
         """
         self.hits = []
         self._outputs = []
+
+    def initialize_latches(self):
+        for column_number in range(self.chip.num_columns):
+            # initialize all latches to 0
+            latches_to_strobe = ['hitor_strobe', 'hit_strobe', 'inject_strobe',
+                                 'TDAC_strobes', 0]
+            self.chip.set_bit_latches(column_number, [], *latches_to_strobe)
+
+            # Remove the bits from setting the strobes
+            self.chip.set_pixel_register("0" * self.chip.num_rows)
+            if column_number % 2 == 1:
+                self.chip.run()
 
     def scan(self, sleep, cycles, global_threshold=150):
         """
