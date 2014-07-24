@@ -276,7 +276,7 @@ class T3MAPSDriver(Dut):
 
         while not self['SEQ'].get_done():
             time.sleep(0.01)
-            print "Wait for done..."
+            #print "Wait for done..."
 
     def _write_blocks_to_seq(self):
         """
