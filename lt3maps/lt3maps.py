@@ -654,7 +654,7 @@ class T3MAPSChip():
         self._import_TDAC_to_pixels(matrix)
         self._apply_pixel_TDAC_to_chip()
 
-    def _apply_pixel_TDAC_to_chip(self):
+    def _apply_pixel_TDAC_to_chip(self, run=True):
         """
         Set the pixel TDAC values to those from the software pixels.
 
@@ -662,7 +662,8 @@ class T3MAPSChip():
         """
         matrix = self.pixel_TDAC_matrix(binary=True)
         for column_index, column in enumerate(matrix):
-            for TDAC_bit_index in range(len(column[0])):  # normally 5
+            num_TDAC_bits = len(column[0])
+            for TDAC_bit_index in range(num_TDAC_bits):  # normally 5
                 args = ('TDAC_strobes', 2**TDAC_bit_index)
                 # find out which pixels get set to 1
                 rows_to_enable = []
@@ -678,6 +679,8 @@ class T3MAPSChip():
                         rows_to_enable.append(row_index)
 
                 self.set_bit_latches(column_index, rows_to_enable, *args)
+                if run and TDAC_bit_index == num_TDAC_bits-1:
+                    self.run()
 
 
 if __name__ == "__main__":
