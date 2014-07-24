@@ -95,12 +95,18 @@ class Tuner(object):
                 # find the pixels which have been hit
                 hit_pixels = self._get_hit_pixels(col_hits)
                 # raise those pixels' TDAC values
+                num_maxed_out_pixels = 0
                 for col, row in hit_pixels:
                     old_value = self.scanner.chip._pixels[col][row].TDAC
-                    if old_value + 2 > 31:
-                        old_value -= 2
                     logging.debug(("(%i,%i) old_value = " % (col,row))+ str(old_value))
-                    self.scanner.chip._pixels[col][row].TDAC = old_value + 2
+                    # ensure that no TDAC gets bigger than 31
+                    if old_value == 31:
+                        num_maxed_out_pixels += 1
+                    else:
+                        pixel = self.scanner.chip._pixels[col][row]
+                        pixel.TDAC = old_value + 1
+                        if not ((col, row) in self.tuned_pixels):
+                            self.tuned_pixels.append((col, row))
                 # Apply new TDAC values to chip
                 self.scanner.chip._apply_pixel_TDAC_to_chip()
                 logging.debug("new TDAC array:")
