@@ -3,3 +3,4 @@
 *.pyc
 *.py#
 out.yaml
+*.log
