@@ -82,8 +82,10 @@ class Tuner(object):
             # Scan
             self.scanner.scan(3, 1, global_threshold)
 
-            # make a matrix of pixel hits
+            # find out which pixels were hit
             col_hits = self._get_column_hits_list(columns_to_scan)
+            hit_pixels = self._get_hit_pixels(col_hits)
+            logging.debug("number of hit pixels: " + str(len(hit_pixels)))
 
             # analyze results
             # first see if any hit pixels are "too noisy" and should be
@@ -92,20 +94,12 @@ class Tuner(object):
 
             # Check if there were any hits
             if not at_least_one_real_hit:
-                # if no hits, reduce global threshold
-                self.global_threshold = global_threshold - 1
-                if self.global_threshold < 0:
-                    keep_going = False
-                hit_pixels = self._get_hit_pixels(col_hits)
-                logging.debug("number of hit pixels: " + str(len(hit_pixels)))
                 # Reset noise counts for previously-hit pixels
                 for pixel in self._noisy_pixels:
                     del pixel.noise_count
                 self._noisy_pixels = []
             else:
                 # if there are hits, increase the TDACs of the hit pixels
-                # find the pixels which have been hit
-                hit_pixels = self._get_hit_pixels(col_hits)
                 # raise those pixels' TDAC values
                 num_maxed_out_pixels = 0
                 for col, row in hit_pixels:
@@ -120,6 +114,12 @@ class Tuner(object):
             logging.info("number of pixels tuned: " +
                 str(len(self.tuned_pixels)))
             if len(self.tuned_pixels) == num_pixels_to_tune:
+                keep_going = False
+            num_noisy_pixels = len([0 for pixel in self.tuned_pixels if
+                                   hasattr(pixel, 'too_noisy')])
+            if not at_least_one_real_hit or len(hit_pixels) - num_noisy_pixels < 10:
+                self.global_threshold = global_threshold - 1
+            if self.global_threshold < 0:
                 keep_going = False
             return col_hits, keep_going
         return scan_function
