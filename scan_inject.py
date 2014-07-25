@@ -134,7 +134,7 @@ class Scanner(object):
             PrmpVbf=11,
             vth=global_threshold,
             DisVbn=49,
-            VbpThStep=10, # Total TDAC range is 44 mV, varies by chip.
+            VbpThStep=20,
             PrmpVbnFol=35,
             load_DAC=True
         )
@@ -177,6 +177,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     scanner = Scanner("lt3maps/lt3maps.yaml")
 
+    scanner.set_all_TDACs(0)
     scanner.scan(args.sleep, args.cycles)
     print "time: ", scanner.hits[-1]['data'][-1]["time"] -\
         scanner.hits[0]['data'][0]["time"]
