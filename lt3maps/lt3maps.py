@@ -664,7 +664,7 @@ class T3MAPSChip():
         for column_index, column in enumerate(matrix):
             num_TDAC_bits = len(column[0])
             for TDAC_bit_index in range(num_TDAC_bits):  # normally 5
-                args = ('TDAC_strobes', 2**TDAC_bit_index)
+                latch_args = ('TDAC_strobes', 2**TDAC_bit_index)
                 # find out which pixels get set to 1
                 rows_to_enable = []
                 for row_index, TDAC_value in enumerate(column):
@@ -678,7 +678,7 @@ class T3MAPSChip():
                     if TDAC_value_reversed[TDAC_bit_index] == "1":
                         rows_to_enable.append(row_index)
 
-                self.set_bit_latches(column_index, rows_to_enable, *args)
+                self.set_bit_latches(column_index, rows_to_enable, *latch_args)
                 if run and TDAC_bit_index == num_TDAC_bits-1:
                     self.run()
 
