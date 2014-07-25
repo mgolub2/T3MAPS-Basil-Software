@@ -486,6 +486,7 @@ class Pixel(object):
     def __init__(self, column, row):
         self.column = column
         self.row = row
+        self.needs_update = False
         self._TDAC = 0
         self._TDAC_binary = "00000"
         self._TDAC_size = 5
@@ -508,6 +509,7 @@ class Pixel(object):
         #logging.debug(string)
         self._TDAC = value
         self._TDAC_binary = Pixel.get_n_bit_binary(value, self._TDAC_size)
+        self.needs_update = True
 
     def update_TDAC(self, strobe_value, enable):
         """
@@ -600,10 +602,9 @@ class T3MAPSChip():
         # Update the saved Pixel TDAC values, maybe
         if 'TDAC_strobes' in args:
             for i, enable_str in enumerate(pixel_register_input[::-1]):
-                self._pixels[column_number][i].update_TDAC(
-                    strobes['TDAC_strobes'], 
-                    (enable_str == "1")
-                )
+                pixel = self._pixels[column_number][i]
+                pixel.update_TDAC(strobes['TDAC_strobes'], (enable_str == "1"))
+                pixel.needs_update = False
         return
 
     def set_pixel_register(self, value):
@@ -632,6 +633,7 @@ class T3MAPSChip():
 
     def _import_TDAC_to_pixels(self, TDAC_matrix):
         for i, column in enumerate(self._pixels):
+            self._columns_to_update.add(i)
             for j, pixel in enumerate(column):
                 pixel.TDAC = TDAC_matrix[i][j]
 
@@ -654,14 +656,26 @@ class T3MAPSChip():
         self._import_TDAC_to_pixels(matrix)
         self._apply_pixel_TDAC_to_chip()
 
+    def _columns_to_update(self):
+        """
+        Return a set of the columns whose TDAC values need updating.
+
+        """
+        pixels = (pixel for column in self._pixels for pixel in column)
+        return set(pix.column for pix in pixels if pix.needs_update)
+
     def _apply_pixel_TDAC_to_chip(self, run=True):
         """
         Set the pixel TDAC values to those from the software pixels.
 
         Go 1 column at a time, 1 TDAC bit at a time.
+        Only update those columns which have changed since the last update.
         """
         matrix = self.pixel_TDAC_matrix(binary=True)
         for column_index, column in enumerate(matrix):
+            if not column_index in self._columns_to_update():
+                continue
+            print "Updating column " + str(column_index)
             num_TDAC_bits = len(column[0])
             for TDAC_bit_index in range(num_TDAC_bits):  # normally 5
                 latch_args = ('TDAC_strobes', 2**TDAC_bit_index)
