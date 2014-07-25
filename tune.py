@@ -91,13 +91,24 @@ class Tuner(object):
 
             # analyze results
             # Check if there were any hits
-            if sum(sum(col) for col in col_hits) == 0:
+            # first see if any hit pixels are "too noisy"
+            at_least_one_real_hit = False
+            for col_num, column in enumerate(col_hits):
+                for row_num in column:
+                    pixel = self.scanner.chip._pixels[column_num][row_num]
+                    if not hasattr(pixel, 'too_noisy'):
+                        at_least_one_real_hit = True
+
+            if at_least_one_real_hit:
                 # if no hits, reduce global threshold
                 self.global_threshold = global_threshold - 1
                 if self.global_threshold < 0:
                     keep_going = False
                 hit_pixels = self._get_hit_pixels(col_hits)
                 logging.debug("number of hit pixels: " + str(len(hit_pixels)))
+                for pixel in self._noisy_pixels:
+                    del pixel.noise_count
+                self._noisy_pixels = []
             else:
                 # if there are hits, increase the TDACs of the hit pixels
                 # find the pixels which have been hit
@@ -113,8 +124,14 @@ class Tuner(object):
                     else:
                         pixel = self.scanner.chip._pixels[col][row]
                         pixel.TDAC = old_value + 1
-                        if not ((col, row) in self.tuned_pixels):
-                            self.tuned_pixels.append((col, row))
+                        if not (pixel in self.tuned_pixels):
+                            self.tuned_pixels.append(pixel)
+                        if not (pixel in self._noisy_pixels):
+                            self._noisy_pixels.append(pixel)
+                            pixel.noise_count = 0
+                        pixel.noise_count += 1
+                        if pixel.noise_count == 4:
+                            pixel.too_noisy = True
                 # Apply new TDAC values to chip
                 self.scanner.chip._apply_pixel_TDAC_to_chip()
                 #logging.debug("new TDAC array:")
