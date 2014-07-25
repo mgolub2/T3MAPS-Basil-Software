@@ -19,6 +19,7 @@ class Tuner(object):
         self.scanner.set_all_TDACs(0)
         self.viewer = None
         self.tuned_pixels = []
+        self._noisy_pixels = []
         if view:
             self.viewer = scan_analysis.ChipViewer()
 
@@ -80,7 +81,7 @@ class Tuner(object):
             self.scanner.reset()
 
             # Scan
-            self.scanner.scan(1, 1, global_threshold)
+            self.scanner.scan(3, 1, global_threshold)
 
             # make a matrix of pixel hits
             for i in range(len(self.scanner.hits[0]['data'])):
@@ -90,22 +91,24 @@ class Tuner(object):
                      col_hits.append([])
 
             # analyze results
-            # Check if there were any hits
-            # first see if any hit pixels are "too noisy"
+            # first see if any hit pixels are "too noisy" and should be
+            # ignored.
             at_least_one_real_hit = False
             for col_num, column in enumerate(col_hits):
                 for row_num in column:
-                    pixel = self.scanner.chip._pixels[column_num][row_num]
+                    pixel = self.scanner.chip._pixels[col_num][row_num]
                     if not hasattr(pixel, 'too_noisy'):
                         at_least_one_real_hit = True
 
-            if at_least_one_real_hit:
+            # Check if there were any hits
+            if not at_least_one_real_hit:
                 # if no hits, reduce global threshold
                 self.global_threshold = global_threshold - 1
                 if self.global_threshold < 0:
                     keep_going = False
                 hit_pixels = self._get_hit_pixels(col_hits)
                 logging.debug("number of hit pixels: " + str(len(hit_pixels)))
+                # Reset noise counts for previously-hit pixels
                 for pixel in self._noisy_pixels:
                     del pixel.noise_count
                 self._noisy_pixels = []
@@ -116,8 +119,10 @@ class Tuner(object):
                 # raise those pixels' TDAC values
                 num_maxed_out_pixels = 0
                 for col, row in hit_pixels:
-                    old_value = self.scanner.chip._pixels[col][row].TDAC
-                    logging.debug(("(%i,%i) old_value = " % (col,row))+ str(old_value))
+                    pixel = self.scanner.chip._pixels[col][row]
+                    old_value = pixel.TDAC
+                    if not hasattr(pixel, 'too_noisy') and old_value < 31:
+                        logging.debug(("(%i,%i) old_value = " % (col,row))+ str(old_value))
                     # ensure that no TDAC gets bigger than 31
                     if old_value == 31:
                         num_maxed_out_pixels += 1
@@ -136,7 +141,7 @@ class Tuner(object):
                 self.scanner.chip._apply_pixel_TDAC_to_chip()
                 #logging.debug("new TDAC array:")
                 #logging.debug(self.scanner.chip.pixel_TDAC_matrix()[4])
-                if num_maxed_out_pixels >= 5:
+                if num_maxed_out_pixels >= 50:
                     keep_going = False
             logging.info("number of pixels tuned: " +
                 str(len(self.tuned_pixels)))
