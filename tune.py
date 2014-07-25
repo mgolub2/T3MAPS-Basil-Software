@@ -14,7 +14,7 @@ class Tuner(object):
 
     """
     def __init__(self, view=True):
-        self.global_threshold = 135
+        self.global_threshold = 80
         self.scanner = scan.Scanner("lt3maps/lt3maps.yaml")
         self.scanner.set_all_TDACs(0)
         self.viewer = None

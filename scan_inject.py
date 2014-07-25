@@ -134,7 +134,7 @@ class Scanner(object):
             PrmpVbf=11,
             vth=global_threshold,
             DisVbn=49,
-            VbpThStep=20, # Total TDAC range is 220 mV
+            VbpThStep=10, # Total TDAC range is 44 mV, varies by chip.
             PrmpVbnFol=35,
             load_DAC=True
         )
