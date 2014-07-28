@@ -49,13 +49,12 @@ class T3MAPSDriver(Dut):
 
     A minimum working example looks like the following:
 
-    >>> chip = T3MAPSDriver("config.yaml")
-    >>> chip.set_configuration_register(column_address=5)
-    >>> chip.write_configuration_reg()
-    >>> chip.set_pixel_register("10"*32)
-    >>> chip.write_pixel_reg()
-    >>> chip._run_seq()
-    >>> output = chip._get_sr_output()
+    >>> driver = T3MAPSDriver("config.yaml")
+    >>> driver.set_global_register(column_address=5)
+    >>> driver.write_global_reg()
+    >>> driver.set_pixel_register("10"*32)
+    >>> driver.write_pixel_reg()
+    >>> output = driver.run()
     >>> print "output:", output
 
     """
