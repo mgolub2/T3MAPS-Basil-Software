@@ -18,7 +18,7 @@ class ChipViewer(object):
     """
     
     def __init__(self):
-        pass
+        self.history = np.zeros((18,64))
 
     @staticmethod
     def _present_array(array):
@@ -62,7 +62,13 @@ class ChipViewer(object):
         return col_hits, True
 
 
-    def _get_application(self, scan_function):
+    @staticmethod
+    def _get_column_diagram(column_hit):
+        column_diagram = np.zeros(64)
+        column_diagram[column_hit] = 1
+        return column_diagram
+
+    def _get_application(self, scan_function, persistence):
         def application(stdscr):
             curses.curs_set(0)
             stdscr.nodelay(1)
@@ -76,8 +82,11 @@ class ChipViewer(object):
                 col_hits, stay_in_loop = scan_function()
                 # process the results
                 for i, col_hit in enumerate(col_hits):
-                    col_diagram = np.zeros(64)
-                    col_diagram[col_hit] = 1
+                    col_diagram = self._get_column_diagram(col_hit)
+                    if persistence:
+                        col_diagram = np.logical_or(col_diagram,
+                            self.history[i]).astype(int)
+                        self.history[i] = col_diagram
                     # display the results
                     result_str = ChipViewer._present_array(col_diagram)
                     stdscr.addstr(i+y_offset, x_offset, result_str)
@@ -85,9 +94,11 @@ class ChipViewer(object):
                 c = stdscr.getch()
                 if c == ord('q'):
                     break
+                if c == ord('x'):
+                    self.history = np.zeros((18, 64))
         return application
 
-    def run_curses(self, scan_function=None):
+    def run_curses(self, scan_function=None, persistence=False):
         """
         Run the curses application with the given scanning function.
 
@@ -124,8 +135,8 @@ class ChipViewer(object):
                 scan_function = functools.partial(scan_function, self.scanner)
 
         # Do this always
-        curses.wrapper(self._get_application(scan_function))
+        curses.wrapper(self._get_application(scan_function, persistence))
 
 if __name__ == "__main__":
     app = ChipViewer()
-    app.run_curses()
+    app.run_curses(persistence=True)
