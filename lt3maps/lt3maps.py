@@ -674,7 +674,6 @@ class T3MAPSChip():
         for column_index, column in enumerate(matrix):
             if not column_index in self._columns_to_update():
                 continue
-            print "Updating column " + str(column_index)
             num_TDAC_bits = len(column[0])
             for TDAC_bit_index in range(num_TDAC_bits):  # normally 5
                 latch_args = ('TDAC_strobes', 2**TDAC_bit_index)
