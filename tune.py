@@ -122,19 +122,21 @@ class Tuner(object):
                 self.global_threshold = global_threshold - 1
             if self.global_threshold < 0:
                 keep_going = False
+            logging.debug(self.scanner.chip.pixel_TDAC_matrix()[8][63])
             return col_hits, keep_going
         return scan_function
 
     def _update_pixel(self, pixel):
         col, row = pixel.column, pixel.row
         old_value = pixel.TDAC
-        if not hasattr(pixel, 'too_noisy') and old_value < 31:
-            logging.debug(("(%i,%i) old_value = " % (col,row))+ str(old_value))
+        delta_TDAC = 4
+        #if not hasattr(pixel, 'too_noisy') and old_value < 31:
+            #logging.debug(("(%i,%i) old_value = " % (col,row))+ str(old_value))
         # ensure that no TDAC gets bigger than 31
-        if old_value == 31:
-            num_maxed_out_pixels += 1
+        if old_value + delta_TDAC >= 31:
+            self.num_maxed_out_pixels += 1
         else:
-            pixel.TDAC = old_value + 1
+            pixel.TDAC = old_value + delta_TDAC
             if not (pixel in self.tuned_pixels):
                 self.tuned_pixels.append(pixel)
             if not (pixel in self._noisy_pixels):
