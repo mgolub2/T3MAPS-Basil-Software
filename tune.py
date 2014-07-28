@@ -19,6 +19,7 @@ class Tuner(object):
         self.scanner.set_all_TDACs(0)
         self.viewer = None
         self.tuned_pixels = []
+        self.num_maxed_out_pixels = 0
         self._noisy_pixels = []
         if view:
             self.viewer = scan_analysis.ChipViewer()
