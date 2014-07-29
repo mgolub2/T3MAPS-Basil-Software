@@ -7,6 +7,7 @@ import scan_inject as scan
 import scan_analysis
 import lt3maps
 import logging
+import time
 
 class Tuner(object):
     """
@@ -23,6 +24,7 @@ class Tuner(object):
         self._noisy_pixels = []
         if view:
             self.viewer = scan_analysis.ChipViewer()
+            self.viewer.history_file = "tune_hits.txt"
 
     def tune(self):
         if self.viewer is None:
@@ -79,6 +81,7 @@ class Tuner(object):
             keep_going = True
             global_threshold = self.global_threshold
             self.scanner.reset()
+            scan_begin_time = time.time()
 
             # Scan
             self.scanner.scan(3, 1, global_threshold)
@@ -123,7 +126,8 @@ class Tuner(object):
             if self.global_threshold < 0:
                 keep_going = False
             logging.debug(self.scanner.chip.pixel_TDAC_matrix()[8][63])
-            return col_hits, keep_going
+            return scan_analysis.ScanFunctionReturn(scan_begin_time, col_hits,
+                keep_going)
         return scan_function
 
     def _update_pixel(self, pixel):

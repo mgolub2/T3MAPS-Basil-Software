@@ -11,6 +11,17 @@ import locale
 locale.setlocale(locale.LC_ALL, '')
 code = locale.getpreferredencoding()
 
+class ScanFunctionReturn(object):
+    """
+    Manage return values from the scan function.
+
+    """
+
+    def __init__(self, timestamp, column_hits, keep_going):
+        self.timestamp = timestamp
+        self.column_hits = column_hits
+        self.keep_going = keep_going
+
 class ChipViewer(object):
     """
     A curses application for real-time data from a chip.
@@ -18,7 +29,25 @@ class ChipViewer(object):
     """
     
     def __init__(self):
-        self.history = np.zeros((18,64))
+        self.persistence_history = np.zeros((18,64))
+        self.event_history = []
+        self.history_file = None
+
+    def _save_history(self):
+        if self.history_file is not None:
+            with open(self.history_file, 'w') as outfile:
+                for i, scan_result in enumerate(self.event_history):
+                    outfile.write("BEGIN SCAN #%i" % i)
+                    outfile.write("\n")
+                    outfile.write(str(scan_result.timestamp))
+                    outfile.write("\n")
+                    for column in scan_result.column_hits:
+                        for row in column:
+                            outfile.write(str(row))
+                            outfile.write(" ")
+                        outfile.write("\n")
+                    outfile.write("END SCAN #%i" % i)
+                    outfile.write("\n")
 
     @staticmethod
     def _present_array(array):
@@ -51,7 +80,7 @@ class ChipViewer(object):
         # make a matrix of pixel hits
         for i in range(len(scanner.hits[0]['data'])):
             col_hits.append(scanner.hits[0]['data'][i]['hit_rows'])
-        return col_hits, True
+        return ScanFunctionReturn(time.time(), col_hits, True)
 
     @staticmethod
     def _get_scan_results_software(scanner):
@@ -79,23 +108,25 @@ class ChipViewer(object):
             stay_in_loop = True
             while stay_in_loop:
                 # run the scan
-                col_hits, stay_in_loop = scan_function()
+                scan_results = scan_function()
+                self.event_history.append(scan_results)
+                stay_in_loop = scan_results.keep_going
                 # process the results
-                for i, col_hit in enumerate(col_hits):
+                for i, col_hit in enumerate(scan_results.column_hits):
                     col_diagram = self._get_column_diagram(col_hit)
                     if persistence:
                         col_diagram = np.logical_or(col_diagram,
-                            self.history[i]).astype(int)
-                        self.history[i] = col_diagram
+                            self.persistence_history[i]).astype(int)
+                        self.persistence_history[i] = col_diagram
                     # display the results
                     result_str = ChipViewer._present_array(col_diagram)
                     stdscr.addstr(i+y_offset, x_offset, result_str)
                 stdscr.refresh()
                 c = stdscr.getch()
                 if c == ord('q'):
-                    break
+                    stay_in_loop = False
                 if c == ord('x'):
-                    self.history = np.zeros((18, 64))
+                    self.persistence_history = np.zeros((18, 64))
         return application
 
     def run_curses(self, scan_function=None, persistence=False):
@@ -136,7 +167,9 @@ class ChipViewer(object):
 
         # Do this always
         curses.wrapper(self._get_application(scan_function, persistence))
+        self._save_history()
 
 if __name__ == "__main__":
     app = ChipViewer()
+    #app.history_file = "history.txt"
     app.run_curses(persistence=True)
