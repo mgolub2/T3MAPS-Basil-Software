@@ -4,3 +4,4 @@
 *.py#
 out.yaml
 *.log
+*.txt
