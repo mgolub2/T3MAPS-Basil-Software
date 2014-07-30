@@ -128,13 +128,12 @@ class Scanner(object):
         NUM_COLUMNS = self.chip.num_columns
         NUM_ROWS = self.chip.num_rows
         # set up the global dac register
-        logging.debug("global threshold = " + str(global_threshold))
         self.chip.set_global_register(
             PrmpVbp=142,
             PrmpVbf=11,
             vth=global_threshold,
             DisVbn=49,
-            VbpThStep=20,
+            VbpThStep=50,
             PrmpVbnFol=35,
             load_DAC=True
         )
@@ -143,6 +142,7 @@ class Scanner(object):
 
         for i in range(NUM_COLUMNS):
             self._set_latches_for_scan(i)
+        #self.chip.set_bit_latches(8, [63], 'hit_strobe', 'inject_strobe')
 
         num_cols_together = 9
         for _ in range(cycles):
