@@ -14,16 +14,15 @@ class Tuner(object):
 
     """
     def __init__(self, view=True):
-        self.global_threshold = 80
+        self.global_threshold = 68
         self.scanner = scan.Scanner("lt3maps/lt3maps.yaml")
         self.scanner.set_all_TDACs(0)
         self.viewer = None
-        self.tuned_pixels = []
-        self._noisy_pixels = []
         if view:
             self.viewer = scan_analysis.ChipViewer()
 
     def tune(self):
+        self.scanner.set_all_TDACs(31)
         if self.viewer is None:
             self._tune_loop()
         else:

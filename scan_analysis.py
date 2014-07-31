@@ -47,7 +47,8 @@ class ChipViewer(object):
     def _get_scan_results_hardware(scanner):
         col_hits = []
         scanner.reset()
-        scanner.scan(1, 1)
+        scanner.set_all_TDACs(30)
+        scanner.scan(1, 1, 68)
         # make a matrix of pixel hits
         for i in range(len(scanner.hits[0]['data'])):
             col_hits.append(scanner.hits[0]['data'][i]['hit_rows'])

@@ -131,11 +131,11 @@ class Scanner(object):
         logging.debug("global threshold = " + str(global_threshold))
         self.chip.set_global_register(
             PrmpVbp=142,
-            PrmpVbf=11,
+            PrmpVbf=15,
             vth=global_threshold,
             DisVbn=49,
-            VbpThStep=20,
-            PrmpVbnFol=35,
+            VbpThStep=10,
+            PrmpVbnFol=150,
             load_DAC=True
         )
 
