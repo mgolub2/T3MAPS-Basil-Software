@@ -50,26 +50,36 @@ class Tuner(object):
         
         - The value of the global threshold.
 
+        - The value of the TDAC step size.
+
         - The TDAC value for each pixel.
 
         Algorithm:
 
-            Initialize global threshold to highest possible, so that no
-            pixels fire. Initialize pixel TDACs to lowest possible, so that
-            if a pixel fires, the TDAC can be raised and the pixel will no
-            longer fire.
+            Initialize the global threshold and TDAC step size so the following
+            hold:
+
+            * If all pixels' TDACs are 0, then all (or almost all)
+            pixels fire.
+
+            * If all pixels' TDACs are 31, then none (or almost none) of
+            the pixels fire.
+
+            Initialize all pixels' TDACs to 31.
 
             Repeat the following until either:
-            * All pixels' TDACs have been adjusted at least once, or
 
-            * 5 pixels have reached their maximum TDACS. Then all
-              as-yet-untriggered pixels are untuned.
+            * All pixels have been marked as tuned, or
+
+            * At least one pixel's TDAC value is set to 0
             
-              - Lower the global threshold until one pixel is hit due to
-                noise.
+              - Lower the TDAC values of all untuned pixels by 1.
 
-              - Increase hit pixels' TDAC values until they are no longer
-                triggered by noise.
+              - For each untuned pixel which registers a hit:
+
+                  - Increase its TDAC value by 1.
+
+                  - Mark it as tuned.
 
         """
         num_pixels_to_tune = len(columns_to_scan) * self.scanner.chip.num_rows
