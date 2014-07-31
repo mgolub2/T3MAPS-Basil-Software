@@ -18,11 +18,18 @@ class Tuner(object):
         self.scanner = scan.Scanner("lt3maps/lt3maps.yaml")
         self.scanner.set_all_TDACs(0)
         self.viewer = None
+        self.untuned_pixels = []
         if view:
             self.viewer = scan_analysis.ChipViewer()
 
     def tune(self):
+        # Initialize all TDAC values to 31
         self.scanner.set_all_TDACs(31)
+
+        # Mark all pixels as untuned
+        self.untuned_pixels = [pixel for column in self.scanner.chip._pixels
+                               for pixel in column]
+
         if self.viewer is None:
             self._tune_loop()
         else:
@@ -64,7 +71,8 @@ class Tuner(object):
             * If all pixels' TDACs are 31, then none (or almost none) of
             the pixels fire.
 
-            Initialize all pixels' TDACs to 31.
+            Initialize all pixels' TDACs to 31. Mark all pixels as
+            untuned.
 
             Repeat the following until either:
 
@@ -74,6 +82,8 @@ class Tuner(object):
             
               - Lower the TDAC values of all untuned pixels by 1.
 
+              - Scan.
+
               - For each untuned pixel which registers a hit:
 
                   - Increase its TDAC value by 1.
@@ -81,15 +91,13 @@ class Tuner(object):
                   - Mark it as tuned.
 
         """
-        num_pixels_to_tune = len(columns_to_scan) * self.scanner.chip.num_rows
         def scan_function():
             # initialize
             keep_going = True
-            global_threshold = self.global_threshold
             self.scanner.reset()
 
             # Scan
-            self.scanner.scan(3, 1, global_threshold)
+            self.scanner.scan(5, 1, self.global_threshold)
 
             # find out which pixels were hit
             col_hits = self._get_column_hits_list(columns_to_scan)
@@ -97,12 +105,9 @@ class Tuner(object):
             logging.debug("number of hit pixels: " + str(len(hit_pixels)))
 
             # analyze results
-            # first see if any hit pixels are "too noisy" and should be
-            # ignored.
-            at_least_one_real_hit = self._has_real_hits(col_hits)
 
             # Check if there were any hits
-            if not at_least_one_real_hit:
+            if len(hit_pixels) == 0:
                 # Reset noise counts for previously-hit pixels
                 for pixel in self._noisy_pixels:
                     del pixel.noise_count
