@@ -82,7 +82,7 @@ class Scanner(object):
 
         # Enable the desired strobes: every other bit, for a recognizable pattern
         latches_to_strobe = ['hit_strobe', 'inject_strobe'] # TODO: change inject
-        chip.set_bit_latches(column_number, None, *latches_to_strobe)
+        chip.set_bit_latches(column_number, [], *latches_to_strobe)
 
         # Remove the bits from setting the strobes
         chip.set_pixel_register("0" * chip.num_rows)
@@ -142,7 +142,7 @@ class Scanner(object):
 
         for i in range(NUM_COLUMNS):
             self._set_latches_for_scan(i)
-        #self.chip.set_bit_latches(8, [63], 'hit_strobe', 'inject_strobe')
+        self.chip.set_bit_latches(8, [63], 'hit_strobe', 'inject_strobe')
 
         num_cols_together = 9
         for _ in range(cycles):

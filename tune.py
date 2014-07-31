@@ -15,7 +15,7 @@ class Tuner(object):
 
     """
     def __init__(self, view=True):
-        self.global_threshold = 82
+        self.global_threshold = 125
         self.scanner = scan.Scanner("lt3maps/lt3maps.yaml")
         self.scanner.set_all_TDACs(0)
         self.viewer = None
@@ -23,7 +23,7 @@ class Tuner(object):
         self.down = True
         self.num_maxed_out_pixels = 0
         self._noisy_pixels = []
-        self.scan_length = 5
+        self.scan_length = 1
         logging.info("beginning scan with length %i" % self.scan_length)
         if view:
             self.viewer = scan_analysis.ChipViewer()
@@ -34,7 +34,7 @@ class Tuner(object):
             self._tune_loop()
         else:
             #self.viewer.run_curses(self.get_scan_function(range(2,17,2)))
-            self.viewer.run_curses(self.get_scan_function([8]))
+            self.viewer.run_curses(self.get_scan_function_alternate(8,63))
         logging.info("end of scan")
 
     def _tune_loop(self):
@@ -135,25 +135,29 @@ class Tuner(object):
             logging.debug(self.scanner.chip.pixel_TDAC_matrix()[8][63])
             return scan_analysis.ScanFunctionReturn(scan_begin_time, col_hits,
                 keep_going)
-        """
+        return scan_function
+
+    def get_scan_function_alternate(self, column, row):
         def scan_function():
             keep_going = True
             global_threshold = self.global_threshold
             self.scanner.reset()
             scan_time = time.time()
             self.scanner.scan(self.scan_length, 1, global_threshold)
-            col_hits = self._get_column_hits_list(columns_to_scan)
+            col_hits = self._get_column_hits_list([column])
             hit_pixels = self._get_hit_pixels(col_hits)
             logging.debug("global threshold: " + str(global_threshold))
-            logging.debug(len(hit_pixels))
-            if global_threshold > 70 and self.down:
-                self.global_threshold -= 1
+            logging.debug("hit pixels: %s", str(hit_pixels))
+            if (column, row) in hit_pixels:
+                pixel = self.scanner.chip._pixels[column][row]
+                logging.debug("old TDAC: %i", pixel.TDAC)
+                pixel.TDAC += 1
+                logging.debug("new TDAC: %i", pixel.TDAC)
+                self.scanner.chip._apply_pixel_TDAC_to_chip()
             else:
-                self.global_threshold += 1
-                self.down = False
+                self.global_threshold -= 1
             return scan_analysis.ScanFunctionReturn(scan_time, col_hits,
                 keep_going)
-        """
         return scan_function
 
     def _update_pixel(self, pixel):
