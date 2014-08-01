@@ -8,6 +8,7 @@ import scan_analysis
 import lt3maps
 import logging
 import struct
+import time
 
 class Tuner(object):
     """
@@ -15,7 +16,7 @@ class Tuner(object):
 
     """
     def __init__(self, view=True):
-        self.global_threshold = 68
+        self.global_threshold = 60
         self.scanner = scan.Scanner("lt3maps/lt3maps.yaml")
         self.scanner.set_all_TDACs(0)
         self.viewer = None
@@ -29,7 +30,10 @@ class Tuner(object):
         # Mark all pixels as untuned
         self.untuned_pixels = [pixel for column in self.scanner.chip._pixels
                                for pixel in column]
+        self.num_pixels_total = len(self.untuned_pixels)
         self.tuned_pixels = []
+        self.iteration = 1
+        self.num_iterations = 4
 
         if self.viewer is None:
             self._tune_loop()
@@ -102,20 +106,36 @@ class Tuner(object):
             keep_going = True
             self.scanner.reset()
 
+            logging.info("number of pixels left to tune: %i",
+            len(self.untuned_pixels))
             # Scan
-            self.scanner.scan(5, 1, self.global_threshold)
+            self.scanner.scan(2, 1, self.global_threshold)
 
             # find out which pixels were hit
             col_hits = self._get_column_hits_list(columns_to_scan)
             hit_pixels = self._get_hit_pixels(col_hits)
             logging.debug("number of hit pixels: " + str(len(hit_pixels)))
 
+            if self.iteration == 1:
+                self.hit_count = {}
+            for pixel_address in hit_pixels:
+                prev_hit_count = self.hit_count.get(pixel_address, 0)
+                self.hit_count[pixel_address] = prev_hit_count + 1
+            if self.iteration < self.num_iterations:
+                self.iteration += 1
+                return col_hits, True
+            else:
+                self.iteration = 1
+
             # analyze results
-            for pixel in self.untuned_pixels:
-                if (pixel.column, pixel.row) in hit_pixels:
+            for pixel in self.untuned_pixels[:]:
+                if (self.hit_count.get((pixel.column, pixel.row),0) >
+                    self.num_iterations/2.0):
                     try:
                         for _ in range(5):
                             pixel.TDAC += 1
+                        if (pixel.column, pixel.row) == (1, 58):
+                            logging.debug(str(pixel))
                     # Handle case where pixel is hit even at maximum TDAC.
                     except ValueError as e:
                         if "too big to fit into" in str(e):
@@ -136,6 +156,10 @@ class Tuner(object):
                 keep_going = False
 
             logging.debug(self.scanner.chip.pixel_TDAC_matrix()[1][:10])
+            if len(hit_pixels) > self.num_pixels_total/2:
+                wait = 5
+                logging.info("waiting %is to calm down", wait)
+                time.sleep(wait)
             return col_hits, keep_going
         return scan_function
 
