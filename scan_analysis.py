@@ -1,4 +1,5 @@
 import scan_inject as scan
+import logging
 import numpy as np
 import pprint
 import yaml
@@ -47,11 +48,16 @@ class ChipViewer(object):
     def _get_scan_results_hardware(scanner):
         col_hits = []
         scanner.reset()
-        scanner.set_all_TDACs(30)
+        #scanner.chip.import_TDAC("tune_results.yaml")
+        scanner.set_all_TDACs(31)
         scanner.scan(1, 1, 68)
         # make a matrix of pixel hits
         for i in range(len(scanner.hits[0]['data'])):
             col_hits.append(scanner.hits[0]['data'][i]['hit_rows'])
+        for index, column in enumerate(col_hits):
+            for row in column:
+                pixel = scanner.chip._pixels[index][row]
+                logging.debug("(%i,%i) TDAC = %i", index, row, pixel.TDAC)
         return col_hits, True
 
     @staticmethod
@@ -128,5 +134,6 @@ class ChipViewer(object):
         curses.wrapper(self._get_application(scan_function))
 
 if __name__ == "__main__":
+    logging.basicConfig(filename="tuning.log", level=logging.DEBUG)
     app = ChipViewer()
     app.run_curses()
