@@ -44,4 +44,5 @@ def application(stdscr):
         if c == ord('q'):
             break
 
-curses.wrapper(application)
+if __name__ == "__main__":
+    curses.wrapper(application)
