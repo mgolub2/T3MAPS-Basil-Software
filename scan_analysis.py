@@ -7,6 +7,7 @@ import time
 import random
 import curses
 import functools
+import argparse
 # Unicode support for curses
 import locale
 locale.setlocale(locale.LC_ALL, '')
@@ -174,6 +175,9 @@ class ChipViewer(object):
 
 if __name__ == "__main__":
     logging.basicConfig(filename="tuning.log", level=logging.DEBUG)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--persist", action="store_true")
+    clargs = parser.parse_args()
     app = ChipViewer()
     app.history_file = "history.txt"
-    app.run_curses(persistence=True)
+    app.run_curses(persistence=clargs.persist)
