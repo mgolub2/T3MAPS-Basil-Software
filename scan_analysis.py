@@ -76,6 +76,7 @@ class ChipViewer(object):
     def _get_scan_results_hardware(scanner):
         col_hits = []
         scanner.reset()
+        scanner.set_all_TDACs(0)
         scanner.scan(1, 1)
         # make a matrix of pixel hits
         for i in range(len(scanner.hits[0]['data'])):
@@ -171,5 +172,4 @@ class ChipViewer(object):
 
 if __name__ == "__main__":
     app = ChipViewer()
-    #app.history_file = "history.txt"
-    app.run_curses(persistence=True)
+    app.run_curses(persistence=False)

@@ -505,7 +505,7 @@ class Pixel(object):
 
         """
         string = "setting " + str((self.column, self.row)) + " to " + str(value)
-        #logging.debug(string)
+        logging.debug(string)
         self._TDAC = value
         self._TDAC_binary = Pixel.get_n_bit_binary(value, self._TDAC_size)
         self.needs_update = True
@@ -543,7 +543,7 @@ class Pixel(object):
         return binary_value
 
 
-class T3MAPSChip():
+class T3MAPSChip(object):
     """
     Control the T3MAPS chip with common functions.
 
@@ -568,6 +568,7 @@ class T3MAPSChip():
 
         """
         driver = self._driver
+        import pdb; pdb.set_trace()
         # Construct the pixel register input
         if rows_to_enable is None:
             pixel_register_input = "1" * self.num_rows
@@ -602,7 +603,7 @@ class T3MAPSChip():
         if 'TDAC_strobes' in args:
             for i, enable_str in enumerate(pixel_register_input[::-1]):
                 pixel = self._pixels[column_number][i]
-                pixel.update_TDAC(strobes['TDAC_strobes'], (enable_str == "1"))
+                #pixel.update_TDAC(strobes['TDAC_strobes'], (enable_str == "1"))
                 pixel.needs_update = False
         return
 

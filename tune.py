@@ -15,13 +15,16 @@ class Tuner(object):
 
     """
     def __init__(self, view=True):
-        self.global_threshold = 80
+        self.global_threshold = 125
         self.scanner = scan.Scanner("lt3maps/lt3maps.yaml")
         self.scanner.set_all_TDACs(0)
         self.viewer = None
         self.tuned_pixels = []
+        self.down = True
         self.num_maxed_out_pixels = 0
         self._noisy_pixels = []
+        self.scan_length = 1
+        logging.info("beginning scan with length %i" % self.scan_length)
         if view:
             self.viewer = scan_analysis.ChipViewer()
             self.viewer.history_file = "tune_hits.txt"
@@ -30,7 +33,9 @@ class Tuner(object):
         if self.viewer is None:
             self._tune_loop()
         else:
-            self.viewer.run_curses(self.get_scan_function(range(1,17)))
+            #self.viewer.run_curses(self.get_scan_function(range(2,17,2)))
+            self.viewer.run_curses(self.get_scan_function_alternate(8,63))
+        logging.info("end of scan")
 
     def _tune_loop(self):
         keep_going = True
@@ -84,7 +89,8 @@ class Tuner(object):
             scan_begin_time = time.time()
 
             # Scan
-            self.scanner.scan(3, 1, global_threshold)
+            self.scanner.scan(self.scan_length, 1, global_threshold)
+            logging.info("global threshold: %i", global_threshold)
 
             # find out which pixels were hit
             col_hits = self._get_column_hits_list(columns_to_scan)
@@ -121,6 +127,7 @@ class Tuner(object):
                 keep_going = False
             num_noisy_pixels = len([0 for pixel in self.tuned_pixels if
                                    hasattr(pixel, 'too_noisy')])
+            logging.debug("number of noisy pixels: " + str(num_noisy_pixels))
             if not at_least_one_real_hit or len(hit_pixels) - num_noisy_pixels < 10:
                 self.global_threshold = global_threshold - 1
             if self.global_threshold < 0:
@@ -130,10 +137,33 @@ class Tuner(object):
                 keep_going)
         return scan_function
 
+    def get_scan_function_alternate(self, column, row):
+        def scan_function():
+            keep_going = True
+            global_threshold = self.global_threshold
+            self.scanner.reset()
+            scan_time = time.time()
+            self.scanner.scan(self.scan_length, 1, global_threshold)
+            col_hits = self._get_column_hits_list([column])
+            hit_pixels = self._get_hit_pixels(col_hits)
+            logging.debug("global threshold: " + str(global_threshold))
+            logging.debug("hit pixels: %s", str(hit_pixels))
+            if (column, row) in hit_pixels:
+                pixel = self.scanner.chip._pixels[column][row]
+                logging.debug("old TDAC: %i", pixel.TDAC)
+                pixel.TDAC += 1
+                logging.debug("new TDAC: %i", pixel.TDAC)
+                self.scanner.chip._apply_pixel_TDAC_to_chip()
+            else:
+                self.global_threshold -= 1
+            return scan_analysis.ScanFunctionReturn(scan_time, col_hits,
+                keep_going)
+        return scan_function
+
     def _update_pixel(self, pixel):
         col, row = pixel.column, pixel.row
         old_value = pixel.TDAC
-        delta_TDAC = 4
+        delta_TDAC = 1
         #if not hasattr(pixel, 'too_noisy') and old_value < 31:
             #logging.debug(("(%i,%i) old_value = " % (col,row))+ str(old_value))
         # ensure that no TDAC gets bigger than 31
