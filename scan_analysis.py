@@ -50,7 +50,12 @@ class ChipViewer(object):
         scanner.reset()
         #scanner.chip.import_TDAC("tune_results.yaml")
         scanner.set_all_TDACs(31)
-        scanner.scan(1, 1, 68)
+        pixels = scanner.chip._pixels
+        for column in pixels:
+            for pixel in column[:32]:
+                pixel.TDAC = 0
+        scanner.chip._apply_pixel_TDAC_to_chip()
+        scanner.scan(1, 1, 60)
         # make a matrix of pixel hits
         for i in range(len(scanner.hits[0]['data'])):
             col_hits.append(scanner.hits[0]['data'][i]['hit_rows'])

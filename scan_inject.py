@@ -134,7 +134,7 @@ class Scanner(object):
             PrmpVbf=15,
             vth=global_threshold,
             DisVbn=49,
-            VbpThStep=10,
+            VbpThStep=25,
             PrmpVbnFol=150,
             load_DAC=True
         )

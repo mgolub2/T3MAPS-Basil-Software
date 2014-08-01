@@ -103,25 +103,15 @@ class Tuner(object):
             self.scanner.reset()
 
             # Scan
-            self.scanner.scan(10, 1, self.global_threshold)
+            self.scanner.scan(5, 1, self.global_threshold)
 
             # find out which pixels were hit
             col_hits = self._get_column_hits_list(columns_to_scan)
             hit_pixels = self._get_hit_pixels(col_hits)
             logging.debug("number of hit pixels: " + str(len(hit_pixels)))
 
-            tuned_hits = [p for p in self.tuned_pixels if (p.column, p.row) in
-                hit_pixels]
-            try_again = len(tuned_hits) > 10
-
             # analyze results
-            pixels_to_adjust = self.untuned_pixels
-            if try_again:
-                pixels_to_adjust = self.tuned_pixels
-                for pixel in self.tuned_pixels:
-                    logging.debug("tuned pixel: (%i,%i), TDAC = %i",
-                                  pixel.column,pixel.row, pixel.TDAC)
-            for pixel in pixels_to_adjust:
+            for pixel in self.untuned_pixels:
                 if (pixel.column, pixel.row) in hit_pixels:
                     try:
                         for _ in range(5):
@@ -132,18 +122,14 @@ class Tuner(object):
                             pass
                         else:
                             raise
-                    if not try_again:
-                        self.untuned_pixels.remove(pixel)
-                        self.tuned_pixels.append(pixel)
-                        logging.debug("marking pixel as tuned: (%i,%i)",
-                                      pixel.column,pixel.row)
-                elif not try_again:
+                    self.untuned_pixels.remove(pixel)
+                    logging.debug("marking pixel as tuned: (%i,%i)",
+                                  pixel.column,pixel.row)
+                else:
                     if pixel.TDAC == 0:
                         keep_going = False
-                    elif len(hit_pixels) < 20:
-                        pixel.TDAC -= 1
                     else:
-                        pass
+                        pixel.TDAC -= 1
 
             self.scanner.chip._apply_pixel_TDAC_to_chip()
             if len(self.untuned_pixels) == 0:
