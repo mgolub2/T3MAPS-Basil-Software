@@ -5,3 +5,5 @@
 out.yaml
 *.log
 /test.py
+/doc/source/_*
+/doc/build
