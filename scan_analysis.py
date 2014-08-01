@@ -48,21 +48,17 @@ class ChipViewer(object):
     def _get_scan_results_hardware(scanner):
         col_hits = []
         scanner.reset()
-        #scanner.chip.import_TDAC("tune_results.yaml")
-        scanner.set_all_TDACs(31)
-        pixels = scanner.chip._pixels
-        for column in pixels:
-            for pixel in column[:32]:
-                pixel.TDAC = 0
-        scanner.chip._apply_pixel_TDAC_to_chip()
-        scanner.scan(1, 1, 60)
+        scanner.chip.import_TDAC("tune_results.yaml")
+        scanner.scan(1, 1, 58)
         # make a matrix of pixel hits
         for i in range(len(scanner.hits[0]['data'])):
             col_hits.append(scanner.hits[0]['data'][i]['hit_rows'])
+        num_hits = 0
         for index, column in enumerate(col_hits):
             for row in column:
                 pixel = scanner.chip._pixels[index][row]
-                logging.debug("(%i,%i) TDAC = %i", index, row, pixel.TDAC)
+                num_hits += 1
+        logging.debug("%i hits", num_hits)
         return col_hits, True
 
     @staticmethod
