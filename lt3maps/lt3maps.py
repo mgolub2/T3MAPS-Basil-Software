@@ -576,7 +576,7 @@ class T3MAPSChip():
             pixel_register_input = "1" * self.num_rows
         else:
             pixel_register_input = ["1" if i in rows_to_enable else "0" for i in
-                                    range(self.num_rows)][::-1]
+                                    range(self.num_rows)]
             pixel_register_input = ''.join(pixel_register_input)
 
         self.set_global_register(
