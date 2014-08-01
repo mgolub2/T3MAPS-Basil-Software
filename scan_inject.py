@@ -162,7 +162,7 @@ class Scanner(object):
             if i % NUM_COLUMNS == 0:
                 cycle_num = i/NUM_COLUMNS
                 self.hits.append({'cycle': cycle_num, 'data': []})
-            hits = np.nonzero(output)[0]
+            hits = np.nonzero(output[::-1])[0]
             self.hits[cycle_num]['data'].append({
                 "column": i % NUM_COLUMNS,
                 "num_hits": len(hits),
