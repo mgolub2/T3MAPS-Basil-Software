@@ -26,3 +26,11 @@ current. (Usually approximately 50 mA.)
     IoMxIn3-------------------YELLOW-------------------GCfgCK
     IoMxIn1-------------------GREEN--------------------Dacld
     IoMxSel1------------------PALE BLUE----------------Stbld
+
+Testing the connections
+-----------------------
+
+To test the T3MAPS to make sure everything is set up correctly, run `python
+test_multi_column.py`. This program sends a unique pattern to each column of
+the chip and then reads it back out. If this test fails, there are incorrect
+connections.
