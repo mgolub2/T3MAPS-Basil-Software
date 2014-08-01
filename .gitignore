@@ -4,4 +4,4 @@
 *.py#
 out.yaml
 *.log
-*.txt
+/test.py

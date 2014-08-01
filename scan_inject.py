@@ -82,7 +82,7 @@ class Scanner(object):
 
         # Enable the desired strobes: every other bit, for a recognizable pattern
         latches_to_strobe = ['hit_strobe', 'inject_strobe'] # TODO: change inject
-        chip.set_bit_latches(column_number, [], *latches_to_strobe)
+        chip.set_bit_latches(column_number, None, *latches_to_strobe)
 
         # Remove the bits from setting the strobes
         chip.set_pixel_register("0" * chip.num_rows)
@@ -128,13 +128,14 @@ class Scanner(object):
         NUM_COLUMNS = self.chip.num_columns
         NUM_ROWS = self.chip.num_rows
         # set up the global dac register
+        logging.debug("global threshold = " + str(global_threshold))
         self.chip.set_global_register(
             PrmpVbp=142,
-            PrmpVbf=11,
+            PrmpVbf=15,
             vth=global_threshold,
             DisVbn=49,
-            VbpThStep=50,
-            PrmpVbnFol=35,
+            VbpThStep=25,
+            PrmpVbnFol=150,
             load_DAC=True
         )
 
@@ -142,7 +143,6 @@ class Scanner(object):
 
         for i in range(NUM_COLUMNS):
             self._set_latches_for_scan(i)
-        self.chip.set_bit_latches(8, [63], 'hit_strobe', 'inject_strobe')
 
         num_cols_together = 9
         for _ in range(cycles):
@@ -162,7 +162,7 @@ class Scanner(object):
             if i % NUM_COLUMNS == 0:
                 cycle_num = i/NUM_COLUMNS
                 self.hits.append({'cycle': cycle_num, 'data': []})
-            hits = np.nonzero(output)[0]
+            hits = np.nonzero(output[::-1])[0]
             self.hits[cycle_num]['data'].append({
                 "column": i % NUM_COLUMNS,
                 "num_hits": len(hits),

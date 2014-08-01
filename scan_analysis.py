@@ -1,4 +1,5 @@
 import scan_inject as scan
+import logging
 import numpy as np
 import pprint
 import yaml
@@ -46,7 +47,7 @@ class ChipViewer(object):
                             outfile.write(str(row))
                             outfile.write(" ")
                         outfile.write("\n")
-                    outfile.write("END SCAN #%i" % i)
+                    outfile.write("END SCAN #%i" %i)
                     outfile.write("\n")
 
     @staticmethod
@@ -76,11 +77,17 @@ class ChipViewer(object):
     def _get_scan_results_hardware(scanner):
         col_hits = []
         scanner.reset()
-        scanner.set_all_TDACs(0)
-        scanner.scan(1, 1)
+        scanner.chip.import_TDAC("tune_results.yaml")
+        scanner.scan(0.5, 1, 58)
         # make a matrix of pixel hits
         for i in range(len(scanner.hits[0]['data'])):
             col_hits.append(scanner.hits[0]['data'][i]['hit_rows'])
+        num_hits = 0
+        for index, column in enumerate(col_hits):
+            for row in column:
+                pixel = scanner.chip._pixels[index][row]
+                num_hits += 1
+        logging.debug("%i hits", num_hits)
         return ScanFunctionReturn(time.time(), col_hits, True)
 
     @staticmethod
@@ -89,14 +96,8 @@ class ChipViewer(object):
         for i in range(18):
             # make a matrix of pixel hits
             col_hits.append(next(scanner))
-        return col_hits, True
+        return ScanFunctionReturn(time.time(), col_hits, True)
 
-
-    @staticmethod
-    def _get_column_diagram(column_hit):
-        column_diagram = np.zeros(64)
-        column_diagram[column_hit] = 1
-        return column_diagram
 
     def _get_application(self, scan_function, persistence):
         def application(stdscr):
@@ -114,7 +115,8 @@ class ChipViewer(object):
                 stay_in_loop = scan_results.keep_going
                 # process the results
                 for i, col_hit in enumerate(scan_results.column_hits):
-                    col_diagram = self._get_column_diagram(col_hit)
+                    col_diagram = np.zeros(64)
+                    col_diagram[col_hit] = 1
                     if persistence:
                         col_diagram = np.logical_or(col_diagram,
                             self.persistence_history[i]).astype(int)
@@ -127,7 +129,7 @@ class ChipViewer(object):
                 if c == ord('q'):
                     stay_in_loop = False
                 if c == ord('x'):
-                    self.persistence_history = np.zeros((18, 64))
+                    self.persistence_history = np.zeros((18,64))
         return application
 
     def run_curses(self, scan_function=None, persistence=False):
@@ -171,5 +173,7 @@ class ChipViewer(object):
         self._save_history()
 
 if __name__ == "__main__":
+    logging.basicConfig(filename="tuning.log", level=logging.DEBUG)
     app = ChipViewer()
-    app.run_curses(persistence=False)
+    app.history_file = "history.txt"
+    app.run_curses(persistence=True)

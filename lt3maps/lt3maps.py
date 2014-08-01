@@ -49,12 +49,13 @@ class T3MAPSDriver(Dut):
 
     A minimum working example looks like the following:
 
-    >>> driver = T3MAPSDriver("config.yaml")
-    >>> driver.set_global_register(column_address=5)
-    >>> driver.write_global_reg()
-    >>> driver.set_pixel_register("10"*32)
-    >>> driver.write_pixel_reg()
-    >>> output = driver.run()
+    >>> chip = T3MAPSDriver("config.yaml")
+    >>> chip.set_configuration_register(column_address=5)
+    >>> chip.write_configuration_reg()
+    >>> chip.set_pixel_register("10"*32)
+    >>> chip.write_pixel_reg()
+    >>> chip._run_seq()
+    >>> output = chip._get_sr_output()
     >>> print "output:", output
 
     """
@@ -505,9 +506,9 @@ class Pixel(object):
 
         """
         string = "setting " + str((self.column, self.row)) + " to " + str(value)
-        logging.debug(string)
-        self._TDAC = value
+        #logging.debug(string)
         self._TDAC_binary = Pixel.get_n_bit_binary(value, self._TDAC_size)
+        self._TDAC = value
         self.needs_update = True
 
     def update_TDAC(self, strobe_value, enable):
@@ -535,6 +536,8 @@ class Pixel(object):
     @staticmethod
     def get_n_bit_binary(x, n):
         binary_value = bin(x)[2:]
+        if binary_value[0] == "-":
+            raise ValueError("%i is negative" % x)
         binary_length = len(binary_value)
         if binary_length <= n:
             binary_value = "0"*(n - binary_length) + binary_value
@@ -543,7 +546,7 @@ class Pixel(object):
         return binary_value
 
 
-class T3MAPSChip(object):
+class T3MAPSChip():
     """
     Control the T3MAPS chip with common functions.
 
@@ -568,7 +571,6 @@ class T3MAPSChip(object):
 
         """
         driver = self._driver
-        import pdb; pdb.set_trace()
         # Construct the pixel register input
         if rows_to_enable is None:
             pixel_register_input = "1" * self.num_rows
@@ -603,7 +605,7 @@ class T3MAPSChip(object):
         if 'TDAC_strobes' in args:
             for i, enable_str in enumerate(pixel_register_input[::-1]):
                 pixel = self._pixels[column_number][i]
-                #pixel.update_TDAC(strobes['TDAC_strobes'], (enable_str == "1"))
+                pixel.update_TDAC(strobes['TDAC_strobes'], (enable_str == "1"))
                 pixel.needs_update = False
         return
 
@@ -633,7 +635,6 @@ class T3MAPSChip(object):
 
     def _import_TDAC_to_pixels(self, TDAC_matrix):
         for i, column in enumerate(self._pixels):
-            self._columns_to_update.add(i)
             for j, pixel in enumerate(column):
                 pixel.TDAC = TDAC_matrix[i][j]
 
@@ -675,6 +676,7 @@ class T3MAPSChip(object):
         for column_index, column in enumerate(matrix):
             if not column_index in self._columns_to_update():
                 continue
+            #print "Updating column " + str(column_index)
             num_TDAC_bits = len(column[0])
             for TDAC_bit_index in range(num_TDAC_bits):  # normally 5
                 latch_args = ('TDAC_strobes', 2**TDAC_bit_index)
