@@ -160,7 +160,8 @@ class Tuner(object):
                 wait = 5
                 logging.info("waiting %is to calm down", wait)
                 time.sleep(wait)
-            return col_hits, keep_going
+            return scan_analysis.ScanFunctionReturn(time.time(), col_hits,
+                keep_going)
         return scan_function
 
     def _get_column_hits_list(self, columns_to_scan):
