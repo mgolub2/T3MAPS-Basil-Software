@@ -107,6 +107,8 @@ class ChipViewer(object):
             # calculate the offset of the screen
             y_offset, x_offset = ChipViewer._get_offset(*stdscr.getmaxyx())
             stdscr.addstr(y_offset - 2, x_offset, "q to quit")
+            stdscr.addstr(y_offset - 3, x_offset,
+            "x to clear persistence. does not affect history")
             stdscr.refresh()
             stay_in_loop = True
             while stay_in_loop:
