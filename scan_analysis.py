@@ -154,6 +154,7 @@ class ChipViewer(object):
             try:
                 self.scanner = scan.Scanner("lt3maps/lt3maps.yaml")
             except:
+                raise
                 self._have_hardware = False
                 def random_generator():
                     while True:
