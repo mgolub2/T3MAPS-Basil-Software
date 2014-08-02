@@ -19,8 +19,9 @@ class ScanFunctionReturn(object):
 
     """
 
-    def __init__(self, timestamp, column_hits, keep_going):
-        self.timestamp = timestamp
+    def __init__(self, start_timestamp, end_timestamp, column_hits, keep_going):
+        self.start_timestamp = start_timestamp
+        self.end_timestamp = end_timestamp
         self.column_hits = column_hits
         self.keep_going = keep_going
 
@@ -41,7 +42,13 @@ class ChipViewer(object):
                 for i, scan_result in enumerate(self.event_history):
                     outfile.write("BEGIN SCAN #%i" % i)
                     outfile.write("\n")
-                    outfile.write(str(scan_result.timestamp))
+                    outfile.write("START TIME")
+                    outfile.write("\n")
+                    outfile.write(str(scan_result.start_timestamp))
+                    outfile.write("\n")
+                    outfile.write("END TIME")
+                    outfile.write("\n")
+                    outfile.write(str(scan_result.end_timestamp))
                     outfile.write("\n")
                     for column in scan_result.column_hits:
                         for row in column:
@@ -79,7 +86,7 @@ class ChipViewer(object):
         col_hits = []
         scanner.reset()
         scanner.chip.import_TDAC("tune_results.yaml")
-        scanner.scan(0.5, 1, 60)
+        start_time, end_time = scanner.scan(0.5, 1, 60)
         # make a matrix of pixel hits
         for i in range(len(scanner.hits[0]['data'])):
             col_hits.append(scanner.hits[0]['data'][i]['hit_rows'])
@@ -89,7 +96,7 @@ class ChipViewer(object):
                 pixel = scanner.chip._pixels[index][row]
                 num_hits += 1
         logging.debug("%i hits", num_hits)
-        return ScanFunctionReturn(time.time(), col_hits, True)
+        return ScanFunctionReturn(start_time, end_time, col_hits, True)
 
     @staticmethod
     def _get_scan_results_software(scanner):
@@ -97,7 +104,7 @@ class ChipViewer(object):
         for i in range(18):
             # make a matrix of pixel hits
             col_hits.append(next(scanner))
-        return ScanFunctionReturn(time.time(), col_hits, True)
+        return ScanFunctionReturn(time.time(), time.time(), col_hits, True)
 
 
     def _get_application(self, scan_function, persistence):

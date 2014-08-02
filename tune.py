@@ -109,7 +109,7 @@ class Tuner(object):
             logging.info("number of pixels left to tune: %i",
             len(self.untuned_pixels))
             # Scan
-            self.scanner.scan(2, 1, self.global_threshold)
+            start_time, end_time = self.scanner.scan(2, 1, self.global_threshold)
 
             # find out which pixels were hit
             col_hits = self._get_column_hits_list(columns_to_scan)
@@ -160,8 +160,8 @@ class Tuner(object):
                 wait = 5
                 logging.info("waiting %is to calm down", wait)
                 time.sleep(wait)
-            return scan_analysis.ScanFunctionReturn(time.time(), col_hits,
-                keep_going)
+            return scan_analysis.ScanFunctionReturn(start_time,
+                    end_time, col_hits, keep_going)
         return scan_function
 
     def _get_column_hits_list(self, columns_to_scan):

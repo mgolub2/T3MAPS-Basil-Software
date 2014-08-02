@@ -148,7 +148,9 @@ class Scanner(object):
         for _ in range(cycles):
             self._reset_hit_configuration(0)
             self.chip.run()
+            start_time = time.time()
             time.sleep(sleep)
+            end_time = time.time()
             for i in range(0, NUM_COLUMNS, num_cols_together):
                 self._read_column_hits(i, i + num_cols_together)
                 output = self.chip.run()
@@ -169,6 +171,7 @@ class Scanner(object):
                 "hit_rows": hits.tolist(),
                 "time": read_time
             })
+        return start_time, end_time
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
