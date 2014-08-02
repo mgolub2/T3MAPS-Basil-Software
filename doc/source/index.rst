@@ -11,6 +11,12 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
+   lt3maps
+   scan_analysis
+   tune
+   scan_inject
+   test_multi_column
+
 
 
 Indices and tables
