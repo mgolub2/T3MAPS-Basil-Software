@@ -24,6 +24,10 @@ class Block(dict):
 
     """
     type = None
+    """
+    Store whether this `Block` is a pixel, global, or inject block.
+
+    """
 
 
 class T3MAPSDriver(Dut):
@@ -49,13 +53,12 @@ class T3MAPSDriver(Dut):
 
     A minimum working example looks like the following:
 
-    >>> chip = T3MAPSDriver("config.yaml")
-    >>> chip.set_configuration_register(column_address=5)
-    >>> chip.write_configuration_reg()
-    >>> chip.set_pixel_register("10"*32)
-    >>> chip.write_pixel_reg()
-    >>> chip._run_seq()
-    >>> output = chip._get_sr_output()
+    >>> driver = T3MAPSDriver("config.yaml")
+    >>> driver.set_global_register(column_address=5)
+    >>> driver.write_global_reg()
+    >>> driver.set_pixel_register("10"*32)
+    >>> driver.write_pixel_reg()
+    >>> output = driver.run()
     >>> print "output:", output
 
     """
@@ -494,7 +497,7 @@ class Pixel(object):
     @property
     def TDAC(self):
         """
-        Get the TDAC value.
+        The TDAC value stored by this pixel.
 
         """
         return self._TDAC
@@ -502,7 +505,7 @@ class Pixel(object):
     @TDAC.setter
     def TDAC(self, value):
         """
-        Set the TDAC value and update the binary.
+        Set the TDAC value and update the binary version.
 
         """
         string = "setting " + str((self.column, self.row)) + " to " + str(value)
@@ -535,6 +538,10 @@ class Pixel(object):
 
     @staticmethod
     def get_n_bit_binary(x, n):
+        """
+        Get the given number expressed as an n-bit binary value.
+
+        """
         binary_value = bin(x)[2:]
         if binary_value[0] == "-":
             raise ValueError("%i is negative" % x)
@@ -546,7 +553,7 @@ class Pixel(object):
         return binary_value
 
 
-class T3MAPSChip():
+class T3MAPSChip(object):
     """
     Control the T3MAPS chip with common functions.
 
@@ -610,10 +617,20 @@ class T3MAPSChip():
         return
 
     def set_pixel_register(self, value):
+        """
+        Set the pixel register to the given value.
+
+        """
         self._driver.set_pixel_register(value)
         self._driver.write_pixel_reg()
 
     def set_global_register(self, **kwargs):
+        """
+        Set the global register fields according to the given `kwargs`.
+
+        To load the DAC register, supply load_DAC=True as a `kwarg`.
+
+        """
         load_DAC = False
         if 'load_DAC' in kwargs.keys():
             load_DAC = kwargs['load_DAC']
@@ -624,9 +641,24 @@ class T3MAPSChip():
         self._driver.write_global_reg(load_DAC=load_DAC)
 
     def run(self, get_output=True):
+        """
+        Send all commands to chip and retrieve output.
+
+        Output is presented first-bit-out (usually row 63) in index 0.
+
+        """
         return self._driver.run(get_output)
 
     def pixel_TDAC_matrix(self, binary=False):
+        """
+        Get a matrix of the current TDAC values stored on the chip.
+
+        Specifying `binary=True` returns a matrix of binary strings.
+        
+        Note: These values are the ones stored in software, not in
+        hardware, so they may be out of date.
+
+        """
         if binary:
             matrix = [[pixel._TDAC_binary for pixel in column] for column in self._pixels]
         else:
@@ -634,6 +666,12 @@ class T3MAPSChip():
         return np.array(matrix)
 
     def _import_TDAC_to_pixels(self, TDAC_matrix):
+        """
+        Set the `Pixel` objects' TDAC values to match the given values.
+
+        Note: Does not send updates to the actual hardware.
+
+        """
         for i, column in enumerate(self._pixels):
             for j, pixel in enumerate(column):
                 pixel.TDAC = TDAC_matrix[i][j]
@@ -650,6 +688,8 @@ class T3MAPSChip():
     def import_TDAC(self, filename):
         """
         Import the pixel TDAC vlues from a YAML file.
+
+        Note: Does send updates to the actual hardware.
 
         """
         infile = open(filename, 'r')
