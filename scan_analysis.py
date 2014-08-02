@@ -79,7 +79,7 @@ class ChipViewer(object):
         col_hits = []
         scanner.reset()
         scanner.chip.import_TDAC("tune_results.yaml")
-        scanner.scan(0.5, 1, 58)
+        scanner.scan(0.5, 1, 60)
         # make a matrix of pixel hits
         for i in range(len(scanner.hits[0]['data'])):
             col_hits.append(scanner.hits[0]['data'][i]['hit_rows'])
