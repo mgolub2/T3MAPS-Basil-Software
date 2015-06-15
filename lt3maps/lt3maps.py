@@ -14,7 +14,7 @@ import numpy as np
 import time
 from bitarray import bitarray
 import logging
-
+from pprint import pprint
 from basil.dut import Dut
 
 
@@ -115,17 +115,17 @@ class T3MAPSDriver(Dut):
             self.init()
         except NotImplementedError:  # this is to make simulation not fail
             print 'chip.init() :: NotImplementedError'
-
+        
         # turn on the adapter card's power
-        self['PWR']['EN_VD1'] = 1
-        self['PWR']['EN_VD2'] = 1
-        self['PWR']['EN_VA1'] = 1
-        self['PWR']['EN_VA2'] = 1
-        self['PWR'].write()
+        #self['PWR']['EN_VD1'] = 1
+        #self['PWR']['EN_VD2'] = 1
+        #self['PWR']['EN_VA1'] = 1
+        #self['PWR']['EN_VA2'] = 1
+        #self['PWR'].write()
 
         # Set the output voltage on the pins
-        self['PWRAC'].set_voltage("VDDD1", voltage)
-        self['PWRAC'].set_voltage("VDDD2", voltage)
+        #self['PWRAC'].set_voltage("VDDD1", voltage)
+        #self['PWRAC'].set_voltage("VDDD2", voltage)
 
         # Set the "block lengths" for commands to pixel and global registers
         self._block_lengths['pixel'] = len(self['PIXEL_REG'])
@@ -189,6 +189,7 @@ class T3MAPSDriver(Dut):
 
         # add the block to the list of blocks to write
         self._blocks.append(seq)
+        pprint(self._blocks)
 
     def write_pixel_reg(self):
         """
@@ -281,6 +282,7 @@ class T3MAPSDriver(Dut):
         while not self['SEQ'].get_done():
             time.sleep(0.01)
             #print "Wait for done..."
+        print "done with writing seq"
 
     def _write_blocks_to_seq(self):
         """

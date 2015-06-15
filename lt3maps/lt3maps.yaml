@@ -10,52 +10,49 @@ version : 0.01
 # any ambiguities (if you are connecting >1 board), you can
 # set it manually.
 transfer_layer:
-  - name  : usb
-    type  : SiUsb # or SimSiUsb to run as simulation
-    board_id  : -1
-    bit_file : "/home/pixel/basil/trunk/examples/pixel/device/ise/pixel.bit"
+  - name  : inf
+    type  : SiTcp # or SimSiUsb to run as simulation
+    init:
+        ip : "192.168.10.16"
+        udp_port : 4660
+        tcp_port : 24
+        tcp_connection : True
+
 
 # The hardware drivers communicate directly with the hardware.
 hw_drivers:
   # DATA receives data from inputs.
   - name      : DATA
     type      : sram_fifo
-    interface : usb
-    base_addr : 0x10020
-    base_data_addr: 0x0001000000000000
+    interface : inf
+    base_addr : 0x200000000
+    base_data_addr: 0x100000000
 
   # SEQ_GEN prepares the output sequence.
   - name      : SEQ_GEN
     type      : seq_gen
-    interface : usb
-    mem_size  : 8192
-    base_addr : 0x11000
+    interface : inf
+    mem_size  : 8196
+    base_addr : 0x1000
 
   # I don't know what TDC does.
   - name      : TDC
     type      : tdc_s3
-    interface : usb
+    interface : inf
     base_addr : 0x10200
 
   # I don't know what PIXEL_RX does.
   - name      : PIXEL_RX
     type      : fast_spi_rx
-    interface : usb
-    base_addr : 0x10100
+    interface : inf
+    base_addr : 0x0100
 
   # I don't know what gpio does.
   - name      : gpio
     type      : gpio
-    interface : usb
-    base_addr : 0x10000
+    interface : inf
+    base_addr : 0x0
     size      : 8
-
-  # PWRAC controls the voltage on the power pins labeled
-  # VD1 and VD2 on the FE-I4 Adapter card.
-  - name      : PWRAC
-    type      : FEI4AdapterCard
-    interface : usb
-    base_addr : 0x00000
 
 # Registers are the primary data structure used to organize input data.
 # They are set up according to the following principle:
@@ -63,7 +60,6 @@ hw_drivers:
 # Hence the first field will start at location 0 and go to location
 # `offset`, which should equal `size`-1, since indexing starts at 0.
 registers:
-
   # GLOBAL_REG is the global configuration register.
   - name        : GLOBAL_REG
     type        : StdRegister
@@ -179,24 +175,3 @@ registers:
         position : 6
       - name     : NOT_USED_1
         position : 7
-
-  - name        : PWR
-    type        : StdRegister
-    hw_driver   : gpio
-    size        : 8
-    fields:
-      - name    : LED
-        size    : 4
-        offset  : 7
-      - name    : EN_VD1
-        size    : 1
-        offset  : 3
-      - name    : EN_VD2
-        size    : 1
-        offset  : 2
-      - name    : EN_VA2
-        size    : 1
-        offset  : 1
-      - name    : EN_VA1
-        size    : 1
-        offset  : 0
